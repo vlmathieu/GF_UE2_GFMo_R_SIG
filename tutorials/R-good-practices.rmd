@@ -1,17 +1,12 @@
----
-title: | 
-  | Bonnes pratiques dans l'utilisation de R pour l'analyse de données
-author: "Valentin Mathieu"
-date: "Septembre 2024"
-output:
-  html_document:
-    toc: true
-    number_section: true
----
+*Auteur : Valentin Mathieu - Dernière mise à jour 02 Septembre 2024*
+
+***
+
+# Bonnes pratiques dans l'utilisation de R pour l'analyse de données
 
 <!-- :240903:gf:r:enseignement: -->
 
-# Étiquette de codage : Écrire un code clair, informatif et facile à utiliser
+## Étiquette de codage : Écrire un code clair, informatif et facile à utiliser
 
 Lorsque vous analysez des données dans R, les lignes de code peuvent rapidement s'accumuler : des centaines de lignes à parcourir, 
 de nombreux objets dont les noms peuvent avoir un sens pour vous, mais pas pour d'autres personnes ou pour vous à l'avenir.
@@ -30,7 +25,7 @@ Avec R, sans règles de forme du code, un script peut vite devenir un enfer à l
 Appliquez-vous à respecter scrupuleusement ces règles lors des TDs qui vous seront donnés, et, surtout, lors des projets que vous mènerez lors
 de cette UE, lors de cette année, et tout au long de votre vie professionnelle.
 
-# Organiser les scripts en sections
+## Organiser les scripts en sections
 
 Comme pour tout travail d'écriture, il est très utile d'avoir une structure claire pour rédiger un script R. 
 Un script est un fichier `.R` qui contient votre code : vous pourriez taper directement le code dans la console R, 
@@ -53,7 +48,7 @@ Vous pouvez alors cliquer sur un élément du plan et y accéder directement : p
 NOTE : Si vous ne voyez pas l'icône de contour, vous n'avez probablement pas la dernière version de RStudio - 
 si vous souhaitez bénéficier de cette fonctionnalité, vous pouvez [télécharger](https://www.rstudio.com/products/rstudio/download/) la dernière version de RStudio.
 
-# Structure du script 
+## Structure du script 
 
 Il n'existe pas de règles strictes concernant le nombre et le nom des sections : vous pouvez adapter le contenu des sections à vos besoins, 
 mais en général, un script comprend les sections suivantes :
@@ -245,9 +240,9 @@ Notez que vous pouvez également sauvegarder les résultats de votre analyse à 
 et vous pouvez vous référer à la [fin de ce tutoriel de visualisation de données](https://ourcodingclub.github.io/tutorials/datavis/index.html) 
 pour un exemple de la manière de procéder.
 
-# Respecter l'étiquette de la syntaxe de codage
+## Respecter l'étiquette de la syntaxe de codage
 
-## Nommer des fichiers et des objets.
+### Nommer des fichiers et des objets.
 
 Les noms de fichiers des scripts doivent être significatifs et se terminer par `.R`. 
 Évitez les espaces et les caractères bizarres ! 
@@ -295,7 +290,7 @@ CalculateAvgClicks                          # Pas si grave, mais le mélange de 
 calculate_avg_clicks , calculateAvgClicks   # Mauvais. La convention veut que les fonctions soient définies en utilisant des points, et non des traits de soulignement.
 ```
 
-## Espacement
+### Espacement
 
 Placez des espaces autour de tous les opérateurs infixes (`=`, `+`, `-`, `<-`, etc.). 
 La même règle s'applique à l'utilisation de `=` dans les appels de fonction. 
@@ -368,7 +363,7 @@ LPI_biome_summ <- LPI2 %>%
             dominant_units = names(which.max(table(units))))  # modal unit type
 ```
 
-## Accolades bouclées
+### Accolades bouclées
 
 Une accolade ouvrante ne doit jamais être placée sur sa propre ligne et doit toujours être suivie d'une nouvelle ligne. 
 Une accolade fermante doit toujours être placée sur sa propre ligne, à moins qu'elle ne soit suivie d'une autre ligne. 
@@ -406,7 +401,7 @@ Il est possible de laisser des déclarations très courtes sur la même ligne :
 if (y < 0 && debug) message("Y is negative")
 ```
 
-## Longueur de la ligne
+### Longueur de la ligne
 
 > La convention officielle est de limiter votre code à 80 caractères par ligne. 
 
@@ -448,7 +443,7 @@ Lorsque vous utilisez ggplot2, gardez le `+` à la fin de la ligne et continuez 
     xlab("\nYear"))
 ```
 
-## Indentation
+### Indentation
 
 Si une commande s'étend sur plusieurs lignes, indentez la deuxième ligne jusqu'à l'endroit où la définition commence. 
 Vous pouvez vérifier l'indentation dans le code `ggplot2` ci-dessus : lorsque vous cliquez sur Entrée après le signe `+`, la nouvelle ligne est automatiquement indentée.
@@ -483,7 +478,7 @@ ggplot()+geom_hline(yintercept=0,linetype="dotted",colour="darkgrey")+
 # La deuxième version est beaucoup plus facile à lire et il n'est pas nécessaire de faire défiler le texte de gauche à droite.
 ```
 
-# Mettre de l'ordre dans les anciens scripts et data frames
+## Mettre de l'ordre dans les anciens scripts et data frames
 
 Il est préférable de commencer à suivre une étiquette de codage raisonnable dès le début, mais en réalité, nous sommes souvent pressés : 
 nous voulons coder rapidement et même si nous savons que nous ne suivons pas les meilleures pratiques, nous continuons, parce que nous pensons 
@@ -492,7 +487,7 @@ de notre analyse.
 Mais il est important d'essayer d'être cohérent avec votre codage et une fois que vous aurez pris l'habitude de le faire, 
 il est à espérer que cela ne vous semblera plus être « une chose de plus à faire ».
 
-## Et si vous voulez rendre votre ancien code plus propre ?
+### Et si vous voulez rendre votre ancien code plus propre ?
 
 Cela fait beaucoup d'espaces à ajouter... Tout d'abord, vous pouvez essayer d'utiliser RStudio pour formater le code pour vous. 
 Cliquez sur `Code/Reformater` le code et voyez ce qui se passe. 
@@ -518,7 +513,7 @@ tidy_dir(path="whatever/your/path/is", recursive = TRUE)
 # recursive	- whether to look for R scripts in subdirectories of the directory specified under path
 ```
 
-## Renommer d'anciens objets et variables
+### Renommer d'anciens objets et variables
 
 Si, comme nous, vous vous retrouvez à devoir utiliser un script datant d'une époque où vous ne connaissiez pas grand-chose, 
 il se peut que vous ayez des objets dont les noms sont vraiment peu informatifs et inutilement difficiles à taper. 
@@ -545,7 +540,7 @@ colnames(dataframe)[colnames(dataframe) == 'Old_Complicated_Name'] <- 'new.simpl
 # Renommer une colonne individuelle dans l'ensemble de données imaginaire
 ```
 
-## Compléments RStudio
+### Compléments RStudio
 
 Les modules complémentaires de RStudio sont disponibles pour la version la plus récente de RStudio et ajoutent certaines fonctionnalités à RStudio 
 à l'aide de menus de type « pointer-cliquer ». 

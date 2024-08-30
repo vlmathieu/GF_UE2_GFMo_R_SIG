@@ -38,10 +38,10 @@ Vous pouvez par exemple consulter les [liens utiles](https://ourcodingclub.githu
 Comme pour tout apprentissage d'une langue étrangère, il y a une courbe d'apprentissage, et c'est en pratiquant qu'on apprend.
 Commençons !
 
-    Remarque : Une question qui pourrait venir à vos esprits est pourquoi R et pas un autre langage de programmation comme Python ou Julia ?
-    Répondre à cette question dépasse le cadre du cours. Nous dirons simplement qu'à partir du moment ou R a les outils pertinents pour la
-    gestion forestière et qu'il ne présente pas de limitation majeure pour des tâches typiques de gestion forestière nous n'aurons pas besoin
-    d'aller voir ailleurs.
+**Remarque** : Une question qui pourrait venir à vos esprits est pourquoi R et pas un autre langage de programmation comme Python ou Julia ?
+Répondre à cette question dépasse le cadre du cours. Nous dirons simplement qu'à partir du moment ou R a les outils pertinents pour la
+gestion forestière et qu'il ne présente pas de limitation majeure pour des tâches typiques de gestion forestière nous n'aurons pas besoin
+d'aller voir ailleurs.
 
 ## Télécharger R et RStudio
 
@@ -310,5 +310,6 @@ Il est généralement préférable de commencer une session de travail avec un e
 ## Sources
 
 [Coding Club, Getting started with R and RStudio. Consulté en septembre 2024.](https://ourcodingclub.github.io/tutorials/intro-to-r/)
-
 [Coding Club, Useful links. Consulté en septembre 2024.](https://ourcodingclub.github.io/links.html)
+
+***
