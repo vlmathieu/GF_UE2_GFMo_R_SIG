@@ -71,4 +71,8 @@ En plus des [tutoriels de François Husson](https://husson.github.io/tutorials.h
 
 [Poser des questions.](stackoverflow.com)
 
+## Source
+
+[Coding Club, Useful links. Consulté en septembre 2024.](https://ourcodingclub.github.io/links.html)
+
 ***

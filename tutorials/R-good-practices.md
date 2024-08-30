@@ -568,4 +568,7 @@ devtools::install_github("ThinkRstat/littleboxes")
 
 Pour aller plus loin sur tous ces aspects d'étiquette, se référer à l'ouvrage [R Style Guide d'Hadley Whickham's](http://adv-r.had.co.nz/Style.html).
 
+## Source 
+
+[Coding Club, Coding Etiquette - Writing clear, informative, ad easy to use code. Consulté en septembre 2024.](https://ourcodingclub.github.io/tutorials/etiquette/)
 ***
