@@ -1,17 +1,12 @@
----
-title: | 
-  | Quelques notions de base sur R
-author: "Valentin Mathieu"
-date: "Septembre 2024"
-output:
-  html_document:
-    toc: true
-    number_section: true
----
+*Auteur : Valentin Mathieu - Dernière mise à jour 02 Septembre 2024*
+
+***
+
+# Quelques notions de base sur R
 
 <!-- :240903:gf:r:enseignement: -->
 
-# Vous connaissez R ?
+## Vous connaissez R ?
 
 R est un **langage de programmation statistique** qui a rapidement gagné en popularité dans de nombreux domaines scientifiques. 
 R est également le nom du logiciel qui utilise ce langage pour le calcul statistique. 
@@ -48,7 +43,7 @@ Commençons !
     gestion forestière et qu'il ne présente pas de limitation majeure pour des tâches typiques de gestion forestière nous n'aurons pas besoin
     d'aller voir ailleurs.
 
-# Télécharger R et RStudio
+## Télécharger R et RStudio
 
 Comme nous l'avons dit précédemment, R n'a pas d'interface graphique en soi, 
 mais la plupart des gens interagissent avec R par le biais de plates-formes graphiques qui offrent des fonctionnalités supplémentaires. 
@@ -98,7 +93,7 @@ et qui flotte dans la mémoire de votre ordinateur. Lorsque vous quittez le prog
 sauvegarder l'espace de travail actuel. Vous n'aurez [presque jamais besoin de le faire](https://www.r-bloggers.com/using-r-dont-save-your-workspace/), 
 et il est préférable de cliquer sur non et de repartir à zéro à chaque fois. (Veillez cependant à sauvegarder votre script !!)
 
-# À vos scripts
+## À vos scripts
 
 Conseil pour démarer : commencez par noter qui écrit, la date et l'objectif principal - 
 dans notre cas, apprendre les bases de R. 
@@ -171,7 +166,7 @@ setwd("C:/User/CC-1-RBasics-master")
 séparant les dossiers (`"C:/dossier/données"`), alors que le chemin d'accès à un fichier que vous entrez dans R doit comporter des barres obliques 
 inverses (`"C:/dossier/données"`).
 
-# Importer et vérifier les données
+## Importer et vérifier les données
 
 Dans RStudio, pour importer des données (sous forme de fichier `.csv`), vous pouvez soit cliquer sur le bouton Import dataset 
 et naviguer jusqu'à l'endroit où vous avez enregistré votre fichier, soit utiliser la commande `read.csv()`. 
@@ -264,7 +259,7 @@ summary(my_data)             # Vous donne un résumé des données
 summary(my_data$var1)        # Vous donne un résumé de cette variable particulière (colonne) dans votre ensemble de données.
 ```
 
-# Glossaire
+## Glossaire
 
 Pour récapituler, voici quelques termes importants vu en abordant les notions de base :
 
@@ -312,7 +307,7 @@ Vous le définissez au début de votre session avec la fonction `setwd()`.
 qui contient toutes les fonctions des packages que vous avez chargés, les données que vous avez importées, les objets que vous avez créés, etc. 
 Il est généralement préférable de commencer une session de travail avec un espace de travail clair.
 
-# Sources
+## Sources
 
 [Coding Club, Getting started with R and RStudio. Consulté en septembre 2024.](https://ourcodingclub.github.io/tutorials/intro-to-r/)
 
