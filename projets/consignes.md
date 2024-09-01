@@ -20,7 +20,7 @@ Il n'y pas d'attentes strictes en matière de résultats. Vous serez avant tout 
 
 3. Un rapport de projet structuré sous la forme "Introducton / Matériel et Méthode / Résultats / Discussion-Conclusion" sera déposé sur le repo GitHub du projet dans un format markdown. Il devra s'appeler "rapport-nom-projet.md". Par exemple, si les intervenants du module devait écrire un rapport sur un projet nommé "risque tempête", leur rapport se nommerait "rapport-risque-tempête.md".
 
-4. Les règles d'étiquettes et de bonne structuration du dépôt sont à suivre à la lettre. Nous serons vigilants là-dessus. Votre rendu doit être propre !
+4. Les règles d'étiquettes (cf. tutoriel dédié) et de bonne structuration du dépôt sont à suivre à la lettre. Nous serons vigilants là-dessus. Votre rendu doit être propre !
 
 5. Chaque projet doit aboutir à une fonction paramétrable avec argument d'entrée et résultats en sortie.
 
