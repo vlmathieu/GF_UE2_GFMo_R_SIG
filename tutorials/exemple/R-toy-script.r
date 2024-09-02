@@ -51,7 +51,16 @@ head(FAO)  # Displays the first few rows
 tail(FAO)  # Displays the last rows
 str(FAO)  # Tells you whether the variables are continuous, integers, categorical or characters
 
-head(FAO$Item)  # Displays the first few rows of this column only
-class(FAO$taxonGroup)  # Tells you what type of variable we're dealing with: it's character now but we want it to be a factor
+head(FAO$Area.Code)  # Displays the first few rows of this column only
+class(FAO$Area.Code)  # Tells you what type of variable we're dealing with: it's character now but we want it to be a factor
 
-FAO$taxonGroup <- as.factor(FAO$taxonGroup)  # What are we doing here?!
+FAO$Area.Code <- as.factor(FAO$Area.Code)  # What are we doing here?!
+
+# More exploration
+dim(FAO)                 # Displays number of rows and columns
+summary(FAO)             # Gives you a summary of the data
+summary(FAO$Area.Code)  # Gives you a summary of that particular variable (column) in your dataset
+
+# Exploring areas
+countries <- unique(FAO$Area)
+length(countries)
