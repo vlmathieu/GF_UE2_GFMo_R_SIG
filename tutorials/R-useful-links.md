@@ -41,7 +41,7 @@ Pour s'initier à R :
 ## R Markdown, contrôle de version, analyse reproduction
 
 - [Introduction à la recherche reproductible dans R et RStudio](susanejohnston.wordpress.com/2015/05/12/an-introduction-to-reproducible-research-in-r-and-r-studio/)
-- [Télécharger LaTeX, trouver des tutoriels et des guides utiles](www.latex-project.org)
+- [Télécharger LaTeX, trouver des tutoriels et des guides utiles](https://www.latex-project.org)
 - [Dépôt de tutoriels Github](help.github.com/articles/good-resources-for-learning-git-and-github/)
 - [Fiche de contrôle Markdown](github.com/adam-p/markdown-here/wiki/Markdown-Here-Cheatsheet)
 - [Vidéo d'introduction aux carnets de notes R](www.rstudio.com/resources/webinars/introducing-notebooks-with-r-markdown/)
