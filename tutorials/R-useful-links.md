@@ -40,11 +40,11 @@ Pour s'initier à R :
 
 ## R Markdown, contrôle de version, analyse reproduction
 
-- [Introduction à la recherche reproductible dans R et RStudio](susanejohnston.wordpress.com/2015/05/12/an-introduction-to-reproducible-research-in-r-and-r-studio/)
-- [Télécharger LaTeX, trouver des tutoriels et des guides utiles](www.latex-project.org)
-- [Dépôt de tutoriels Github](help.github.com/articles/good-resources-for-learning-git-and-github/)
-- [Fiche de contrôle Markdown](github.com/adam-p/markdown-here/wiki/Markdown-Here-Cheatsheet)
-- [Vidéo d'introduction aux carnets de notes R](www.rstudio.com/resources/webinars/introducing-notebooks-with-r-markdown/)
+- [Introduction à la recherche reproductible dans R et RStudio](http://susanejohnston.wordpress.com/2015/05/12/an-introduction-to-reproducible-research-in-r-and-r-studio)
+- [Télécharger LaTeX, trouver des tutoriels et des guides utiles](http://www.latex-project.org/)
+- [Dépôt de tutoriels Github](http://help.github.com/articles/good-resources-for-learning-git-and-github)
+- [Fiche de contrôle Markdown](http://github.com/adam-p/markdown-here/wiki/Markdown-Here-Cheatsheet)
+- [Vidéo d'introduction aux carnets de notes R](http://www.rstudio.com/resources/webinars/introducing-notebooks-with-r-markdown)
 - [Guide concis de la programmation LaTeX](https://tobi.oetiker.ch/lshort/lshort.pdf)
 - [British Ecological Society Guide to Data Management in Ecology and Evolution](http://www.britishecologicalsociety.org/wp-content/uploads/Publ_Data-Management-Booklet.pdf)
 - [Matériel pour les ateliers sur le contrôle des versions et le code reproductible lors de la réunion annuelle 2016 de la British Ecological Society](https://github.com/BES2016Workshop)
