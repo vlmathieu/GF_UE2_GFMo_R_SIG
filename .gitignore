@@ -66,5 +66,5 @@ rsconnect/
 *README_cache/
 #*README_files/
 
-# Prevent users to commit .las files (Lidar data)
-*.las
+# Prevent users to commit .laz files (Lidar data)
+*.laz
