@@ -60,7 +60,7 @@ Si vous utilisez un Mac, en plus de R et RStudio, vous devez télécharger XQuar
 
 Ouvrez RStudio. Cliquez sur « Fichier/Nouveau fichier/R script ».
 
-![](images/rstudio_panels.png)
+![](../images/rstudio_panels.png)
 
 Vous verrez maintenant une fenêtre comme celle ci-dessus. 
 Vous pouvez taper du code directement dans la console en bas à gauche (cela ne veut pas dire que vous devez le faire* !). 
@@ -176,7 +176,7 @@ comme les noms des colonnes) et cliquez sur *Import*.
 Dans la console, vous verrez le code de votre importation, qui comprend le chemin d'accès au fichier - 
 il est conseillé de copier ce code dans votre script, afin de savoir à l'avenir d'où provient votre ensemble de données.
 
-![](images/rstudio_import.png)
+![](../images/rstudio_import.png)
 
 R fonctionne mieux avec les fichiers `.csv` (comma separated values). 
 Si vous avez saisi vos données dans Excel, vous devez cliquer sur *Enregistrer* sous et sélectionner `csv` comme extension de fichier. 

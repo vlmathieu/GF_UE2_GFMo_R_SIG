@@ -43,7 +43,7 @@ Pour ajouter un commentaire au plan, tapez quatre `-` après votre texte de comm
 Pour visualiser votre plan, cliquez sur le bouton comme indiqué ci-dessous. 
 Vous pouvez alors cliquer sur un élément du plan et y accéder directement : plus besoin de faire défiler la page !
 
-![](images/outline.png)
+![](../images/outline.png)
 
 NOTE : Si vous ne voyez pas l'icône de contour, vous n'avez probablement pas la dernière version de RStudio - 
 si vous souhaitez bénéficier de cette fonctionnalité, vous pouvez [télécharger](https://www.rstudio.com/products/rstudio/download/) la dernière version de RStudio.
@@ -87,13 +87,13 @@ Vous avez peut-être remarqué que lorsque vous créez une section en utilisant 
 une petite flèche apparaît dans la marge à côté du commentaire. 
 En cliquant sur ces flèches, vous pouvez réduire la section, ce qui est très utile lorsque vous parcourez un long texte.
 
-![](images/etiquette_outline.png)
+![](../images/etiquette_outline.png)
 
 Vous pouvez également aller dans `Edit/Folding/Collapse all` pour réduire toutes les sections. 
 Il s'agit du plan de votre script et, à partir de là, vous pouvez naviguer jusqu'à la section dont vous avez besoin. 
 `Expand all` affiche tout le code que vous avez écrit. Voici un exemple :
 
-![](images/outline2.png)
+![](../images/outline2.png)
 
 **Fonctions** : Utilisez-vous des fonctions écrites par vous et/ou par d'autres ? Définissez-les ici. 
 Par exemple, des fonctions pour supprimer les valeurs NA, des fonctions pour créer votre propre thème ggplot2. 
@@ -524,7 +524,7 @@ soit toutes les occasions où le nom de l'objet est mentionné.
 Vous pouvez également sélectionner des lignes de code et ne renommer l'objet que dans cette partie du code - veillez à cliquer sur `In selection`, 
 sinon le nom de l'objet sera remplacé dans l'ensemble du script, bien que vous n'ayez sélectionné qu'une partie des lignes.
 
-![](images/replace.png)
+![](../images/replace.png)
 
 If you want to rename your variable names, that's quickly done, too.
 

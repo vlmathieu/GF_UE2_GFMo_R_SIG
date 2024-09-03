@@ -70,17 +70,17 @@ Chaque fichier sur GitHub a un historique, donc au lieu d'avoir plusieurs fichie
 
 Par exemple, voici l'historique d'un fichier markdown présentant les bases de R et utilisé pour ce cours, tel qu'il est affiché sur Github.
 
-![](images/history.png)
+![](../images/history.png)
 
 ## Créez votre propre dépôt/repo et votre propre structure de dossier de projet
 
 Pour créer un dépôt/repo, allez dans `Dépôts/Nouveau dépôt` / `Repositories/New` - choisissez un nom concis et informatif, sans espaces ni caractères bizarres. Il peut s'agir de votre dépôt principal qui contient les recherches passées et en cours, les données, les scripts, les manuscrits. Plus tard, vous voudrez peut-être avoir plus de dépôts - par exemple un dépôt associé à un projet particulier que vous voulez rendre public ou un projet pour lequel vous cherchez activement à obtenir des commentaires d'un public plus large. Pour l'instant, nous allons nous concentrer sur l'organisation et l'utilisation de votre dépôt principal, qui contient les fichiers de tout votre travail. Avec un compte GitHub gratuit, vous pouvez utiliser des dépôts publics ou privés.
 
-![](images/new_repo.png)
+![](../images/new_repo.png)
 
 Créons un nouveau dépôt privé. Vous pouvez l'appeler comme vous le souhaitez si le nom est disponible.
 
-![](images/create-repo.png)
+![](../images/create-repo.png)
 
 **Cliquez sur `Initialiser le dépôt avec un fichier README.md` / `Add a README file`**. Il est courant que chaque dépôt/repo ait un fichier `README.md`, qui contient des informations sur le projet, l'objectif du dépôt, ainsi que des commentaires sur les licences et les sources de données. Github comprend plusieurs formats de texte, dont `.txt` et `.md`. `.md` signifie un fichier écrit en Markdown. Vous avez peut-être déjà utilisé Markdown dans RStudio pour créer des rapports bien organisés de votre code et de ses résultats (vous pouvez également consulter le [tutoriel Markdown du Coding Club](https://ourcodingclub.github.io/tutorials/rmarkdown/)). Vous pouvez également utiliser Markdown pour écrire des fichiers de texte brut, par exemple le fichier que vous êtes en train de lire a été écrit en Markdown.
 
@@ -88,15 +88,15 @@ Créons un nouveau dépôt privé. Vous pouvez l'appeler comme vous le souhaitez
 
 Une fois que vous êtes prêt, cliquez sur **Create repository**.
 
-![](images/param-new-repo.png)
+![](../images/param-new-repo.png)
 
 Voici à quoi devrait ressembler le référentiel :
 
-![](images/my-first-repo-look.png)
+![](../images/my-first-repo-look.png)
 
 Vous pouvez éditer directement votre fichier `README.md` sur Github en cliquant sur le fichier et en sélectionnant `Editer ce fichier`/ `Edit this file`.
 
-![](images/edit-file.png)
+![](../images/edit-file.png)
 
 ### Exercice 1 : Écrire un fichier `README.md`informatif
 
@@ -114,7 +114,7 @@ Vous pouvez maintenant écrire le fichier `README.md` de votre dépôt. Pour fai
 
 Une fois que vous avez rédigé votre fichier `README.md`, allez jusqu'au bas de la page. Vous pouvez maintenant **commit** le fichier au dépôt. Pour ce faire, spécifiez un **message de commit** qui décrit brièvement les modifications. Les **messages de commit** doivent être concis, mais descriptifs. Sélectionnez **Commit directly to the `main` branch**, puis cliquez sur **Commit changes**.
 
-![](images/comit-changes.png)
+![](../images/comit-changes.png)
 
 ### Exercice 2 : Editer le fichier `.gitignore`
 
@@ -146,7 +146,7 @@ Sélectionnez le fichier `.gitignore` et cliquez sur `Edit`. Comme vous le verre
 
 Pensez aux différents dossiers que vous pourriez vouloir inclure dans votre dépôt. Si vous travaillez sur un dépôt partagé, discutez-en avec vos collaborateurs. Pour le dépôt d'un groupe de laboratoire, voici quelques exemples : manuscrits, données, figures, scripts, `scripts/utilisateurs/dossier_personnel_votre_nom`. Pour créer un nouveau dossier, cliquez sur `Create new file` et ajoutez le nom de votre nouveau dossier, par exemple `manuscripts/` avant le nom du fichier, dans ce cas un fichier `README.md` rapide. Lorsque vous créez des dossiers dans votre repo via le site web de GitHub, vous devez toujours y associer au moins un fichier, vous ne pouvez pas simplement créer un dossier vide. Vous pouvez ensuite écrire et livrer le fichier.
 
-![](images/new-folder.png)
+![](../images/new-folder.png)
 
 ### L'étiquette GitHub
 
@@ -172,7 +172,7 @@ Connectez-vous à votre compte Github et naviguez jusqu'au dépôt que vous avez
 
 Cliquez sur Code et copiez le lien HTTPS.
 
-![](images/clone-repo.png)
+![](../images/clone-repo.png)
 
 Ouvrez maintenant RStudio, cliquez sur `File/ New Project/ Version control/ Git` et collez le lien HTTPS du dépôt Github dans le champ `Repository URL :`. Sélectionnez un dossier sur votre ordinateur - c'est là que se trouvera la copie « locale » de votre dépôt (la copie en ligne se trouvant sur Github).
 
@@ -199,7 +199,7 @@ Vous pouvez également suivre ce [guide avec des captures d'écran](https://docs
 
 Sous Windows, une fois que vous interagissez avec un dépôt privé, vous devriez obtenir une invite ressemblant à ceci :
 
-![](images/connect-github-rstudio.png)
+![](../images/connect-github-rstudio.png)
 
 Il suffit de coller le jeton dans le champ Jeton d'accès personnel et de continuer.
 
@@ -211,7 +211,7 @@ Votre authentification devrait maintenant être réussie et vous pouvez interagi
 
 Sous Windows, lorsque vous essayez de cloner un dépôt privé depuis GitHub, vous devriez obtenir une invite comme celle-ci :
 
-![](images/sign-in-browser.png)
+![](../images/sign-in-browser.png)
 
 Cliquez simplement sur « Se connecter via le navigateur » et autorisez votre appareil dans la fenêtre du navigateur qui s'affiche. L'authentification peut se faire automatiquement si vous êtes déjà connecté à GitHub dans votre navigateur.
 
@@ -245,7 +245,7 @@ Vous êtes maintenant prêt à apporter des modifications et à les documenter v
 
 Vous pouvez ouvrir certains des fichiers que vous avez mis en ligne plus tôt - par exemple, si vous cliquez sur votre fichier `README.md`, il s'ouvrira dans RStudio et vous pourrez y apporter des modifications. Ajoutez un peu de texte pour illustrer le fonctionnement du contrôle de version. Enregistrez le fichier au même endroit (c'est-à-dire dans votre repo).
 
-![](images/first-diff.png)
+![](../images/first-diff.png)
 
 Si vous cliquez sur l'onglet Git, vous verrez que votre fichier `README.md` y est listé. Cochez-le. Il y a maintenant un M - cela signifie que vous avez modifié le fichier. S'il y a un A, c'est un fichier ajouté, et un D est un fichier supprimé.
 
@@ -253,11 +253,11 @@ Si vous sélectionnez le fichier `README.md` et que vous cliquez sur `Diff`, vou
 
 Cliquez sur `Commit` et ajoutez votre message de `commit` - essayez d'être concis et informatif - qu'avez-vous fait ? Une fois que vous avez cliqué sur `Commit`, vous recevez un message indiquant les modifications que vous avez apportées.
 
-![](images/first-commit.png)
+![](../images/first-commit.png)
 
 Vous verrez un message indiquant que votre branche a maintenant un commit d'avance sur la branche `origin/main` - c'est la branche qui est sur Github - nous devons maintenant informer Github des changements que nous avons faits.
 
-![](images/your-branch-ahead.png)
+![](../images/your-branch-ahead.png)
 
 On ne le répétera jamais assez : il faut toujours pull avant de push. Pull signifie que vous récupérez la version la plus récente du dépôt Github sur votre branche locale - cette commande est particulièrement utile si plusieurs personnes travaillent sur le même dépôt - imaginez qu'il y ait un second script examinant le pH du sol le long de ce gradient d'altitude, et que votre collaborateur travaille dessus en même temps que vous - vous ne voudriez pas « écraser » leur travail et causer des problèmes. Dans ce cas, vous êtes le seul à travailler sur ces fichiers, mais il est toujours bon de prendre l'habitude de pull avant de push. Une fois que vous avez pull, vous verrez un message indiquant que vous êtes déjà à jour, vous pouvez maintenant push ! Cliquez sur Push, attendez que le chargement soit terminé et cliquez sur Close - c'est tout, vous avez réussi à pousser votre travail sur Github !
 
@@ -289,9 +289,9 @@ Lorsque vous parcourez l'historique de vos commits sur le site de GitHub, vous p
 
 Traditionnellement, Git utilise la ligne de commande pour effectuer des actions sur les dépôts Git locaux. Dans ce tutoriel, nous avons ignoré la ligne de commande, mais elle est nécessaire si vous souhaitez avoir plus de contrôle sur Git. Il existe plusieurs excellents guides d'introduction au contrôle de version à l'aide de Git, par exemple le [guide Numeracy, Modelling and Data management du professeur Simon Mudd](http://simon-m-mudd.github.io/NMDM_book/#_version_control_with_git), le [guide The Software Carpentry](https://swcarpentry.github.io/git-novice/) et ce [guide issu de l'atelier Version Control de la British Ecological Society](https://github.com/BES2016Workshop/version-control). Pour des outils de ligne de commande plus génériques, consultez cet [aide-mémoire général](https://www.git-tower.com/blog/command-line-cheat-sheet) et [cet aide-mémoire pour les utilisateurs de Mac](https://github.com/0nn0/terminal-mac-cheatsheet). Le Coding Club a également créé un tableau et un diagramme de flux avec quelques commandes Git de base et la façon dont elles s'intègrent dans le flux de travail Git/Github. Les lignes orange se réfèrent au flux de travail principal, les lignes bleues décrivent des fonctions supplémentaires et les lignes vertes traitent des branches :
 
-![](images/git_cli_nmdm.png)
+![](../images/git_cli_nmdm.png)
 
-![](images/table-git.png)
+![](../images/table-git.png)
 
 Vous trouverez ci-dessous un exercice rapide vous permettant de vous familiariser avec ces outils de ligne de commande. Il y a plusieurs façons d'interagir avec Git en utilisant le terminal :
 
@@ -299,7 +299,7 @@ Vous trouverez ci-dessous un exercice rapide vous permettant de vous familiarise
 2. Si vous êtes sur une machine Mac ou Linux, vous pouvez simplement ouvrir un programme de terminal et lancer Git à partir de là. La plupart des machines Mac et Linux ont Git installé par défaut. Sur Mac, vous pouvez ouvrir un terminal en allant dans : `Applications/Utilities/Terminal.app`.
 3. Si vous êtes sur une machine personnelle Windows, vous pouvez lancer Git en utilisant Git Bash, qui peut être installé lorsque vous avez installé Git. Vous devriez pouvoir le lancer à partir de `More -> Shell` dans RStudio. Si cela ne fonctionne pas, recherchez le programme dans votre menu Démarrer.
 
-![](images/rstudio_new_terminal.png)
+![](../images/rstudio_new_terminal.png)
 
 Une fois que vous avez ouvert un terminal en utilisant l'une des méthodes ci-dessus, commencez par créer un dossier appelé `git_test` quelque part sur votre système local, à l'aide de la commande `mkdir` (make directory) en tapant ce qui suit dans le terminal et en appuyant sur la touche « Entrée ». Par exemple, pour créer le répertoire dans le dossier Documents :
 

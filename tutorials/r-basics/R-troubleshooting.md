@@ -18,7 +18,7 @@ C'est toujours une bonne idée de rechercher les x dans votre code avant de l'ex
 L'autre façon dont R signale les erreurs est par le biais de messages dans la console, qui apparaissent après l'exécution d'un code qui n'est pas tout à fait correct. 
 Bien que les messages d'erreur aient l'air effrayants (la police rouge et des mots comme « fatal » leur donnent une mauvaise réputation), ils constituent en fait la deuxième meilleure option par rapport à l'absence totale d'erreurs : R a identifié un problème et, à partir du message, vous pouvez comprendre de quoi il s'agit et le résoudre !
 
-![](images/xandm.png)
+![](../images/xandm.png)
 
 ## Se familiariser avec les erreurs courantes et les solutions
 
