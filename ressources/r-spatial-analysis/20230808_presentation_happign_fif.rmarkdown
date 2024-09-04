@@ -1,0 +1,369 @@
+------------------------------------------------------------------------
+
+title: "presentation_happign_fif"
+author: "Paul CARTERON"
+format: html
+
+```         
+df-print: paged
+self-contained: true
+```
+
+editor: visual
+
+------------------------------------------------------------------------
+
+```{r library}
+#| echo: true
+#| output: false
+#| warning: false
+
+library(happign)
+library(sf)
+library(terra)
+library(tmap);tmap_mode("view")
+
+```
+
+## Structure des flux IGN (WFS et WMS)
+
+Pour obtenir une ressource à partir des flux WFS ou WMS de l'IGN il faut :
+
+-   Le type de flux (WMS ou WFS) --\> `get_wms_raster()` ou `get_wfs()`
+-   Une zone géographque --\> à partir d'un fichier avec `sf::st_read()` ou de facon interactive avec `mapedit::drawFeatures()`
+-   Le nom de la couche --\> `get_layers_metadata()`
+
+## Flux WFS
+
+```{r shp from happign}
+
+shp <- read_sf(system.file("extdata/penmarch.shp", package = "happign"))
+
+tm_shape(shp)+
+  tm_polygons("red")
+
+```
+
+```{r apikeys}
+
+get_apikeys()
+apikey <- get_apikeys()[1]
+
+```
+
+```{r layers_metadata}
+
+layers <- get_layers_metadata("wfs", "administratif")
+
+layer <- layers[1,1]
+
+```
+
+```{r first use of get_wfs}
+
+arrondissement <- get_wfs(x = shp,
+                          layer = "ADMINEXPRESS-COG-CARTO.LATEST:arrondissement")
+
+
+tm_shape(arrondissement)+
+  tm_polygons()+
+tm_shape(shp)+
+  tm_polygons("red")
+
+```
+
+## Flux WFS : spatial filter
+
+```{r setup spatial filter}
+
+apikey <- "parcellaire"
+layer <- "CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle"
+
+get_layers_metadata("wfs", "parcellaire")
+
+```
+
+```{r bbox}
+
+# bbox
+parcel_bbox <- get_wfs(shp, layer, spatial_filter = "bbox")
+
+tm_shape(shp)+
+  tm_borders("black", lwd = 3)+
+tm_shape(st_as_sfc(st_bbox(shp)), name = "bbox", is.master = T)+
+  tm_borders("red", lwd = 2)+
+tm_shape(parcel_bbox)+
+  tm_borders("grey30")
+
+```
+
+```{r intersects}
+
+# intersects
+parcel_intersects <- get_wfs(shp, layer, spatial_filter = "intersects")
+
+tm_shape(shp)+
+  tm_borders("red", lwd = 2)+
+tm_shape(parcel_intersects)+
+  tm_borders("grey30")
+
+
+```
+
+```{r within}
+
+# within
+
+parcel_within <- get_wfs(shp, layer, spatial_filter = "within")
+
+tm_shape(shp)+
+  tm_borders("red", lwd = 3)+
+tm_shape(parcel_within)+
+  tm_borders("grey30")
+
+```
+
+```{r dwithin}
+
+# dwithin
+parcel_dwithin <- get_wfs(shp, layer,
+                          spatial_filter = c("dwithin", 200, "meters"))
+
+tm_shape(shp)+
+  tm_borders("red", lwd = 3)+
+tm_shape(st_buffer(shp, 200))+
+  tm_borders("red", lwd = 1)+
+tm_shape(parcel_dwithin)+
+  tm_borders("grey30")
+
+```
+
+## Flux WFS : ecql filter
+
+Les filtres ECQLs sont une version simplifiée des filtres SQL. Il permettent de filtrer sur l'ensemble de la source donnée de façon précise. Pour utiliser un filtre ECQL il est nécessaire de connaitre le nom des attributs de la table. Pour cela on utilise la fonction `get_wfs_attributes`.
+
+```{r setup ecql}
+
+layer <- "LIMITES_ADMINISTRATIVES_EXPRESS.LATEST:commune"
+attributs <- get_wfs_attributes(layer)
+
+print(attributs)
+
+```
+
+Une fois que les noms d'attributs sont connus, il suffit de construire le filtre ECQL. Dans cet exemple, on filtre toutes les communes commençant par F, terminant par F et contenant un I.
+
+\*\* Remarque : pour pouvoir requêter sur l'ensemble de la table (france entière), il ne faut pas fournir une shape à `get_wfs` i.e. `x = NULL`\*\*
+
+```{r ecql_filter}
+
+ecql_filter <- "nom_m LIKE 'F%I%F'"
+
+fif_commune <- get_wfs(x = NULL,
+                       layer,
+                       ecql_filter = ecql_filter)
+
+tm_shape(fif_commune)+
+  tm_borders("red")+
+  tm_text("nom_m", col = "red")
+
+```
+
+Il est également possible de combiner plusieurs filtres ECQLs et des filtres spatiaux. Dans cet exemple, toutes les communes précédente avec une population de plus de 1000 habitants.
+
+```{r ecql_filter 2}
+
+ecql_filter <- "nom_m LIKE 'F%I%F' AND population > 1000"
+
+fif_commune_plus_de_1000 <- get_wfs(x = NULL,
+                                    layer,
+                                    ecql_filter = ecql_filter)
+
+
+tm_shape(fif_commune_plus_de_1000)+
+  tm_borders("red")+
+  tm_text("nom_m", col = "red")
+
+```
+
+## Flux WFS : session interactive
+
+```{r interactive session}
+#| eval: false
+
+res <- get_wfs(shp, interactive = T)
+
+# qtm : quick tmap : permet d'afficher sans connaitre le type de donnée en amont
+tm_shape(shp)+
+  tm_borders()+
+
+qtm(st_make_valid(res))
+
+```
+
+# Flux WMS
+
+Pour récupérer un raster, le principe de base est le même que pour `get_wfs()`, il faut uniquement préciser la résolution en plus.
+
+Dans cet exemple, le MNT de Penmarch est téléchargé à une résolution de 25m.
+
+```{r get_wms_raster}
+
+apikey <- "altimetrie"
+layer <- "ELEVATION.ELEVATIONGRIDCOVERAGE" #get_layers_metadata(apikey, "wms")
+penmarch <- get_wfs(shp, "LIMITES_ADMINISTRATIVES_EXPRESS.LATEST:commune")
+
+mnt <- get_wms_raster(x = penmarch,
+                      layer = layer, 
+                      res = 25,
+                      rgb = FALSE)
+
+tm_shape(mnt)+
+  tm_raster()+
+tm_shape(penmarch)+
+  tm_borders("black", lwd = 2)
+
+
+
+```
+
+# Flux WMS : crs
+
+Il est possible de demander un système de coordonnée ce qui évite de dévoir reprojeter le raster après téléchargement (chronophage). Cependant, il faut faire attention à préciser la résolution dans le système de coordonnée souhaitée. Par exemple pour le WGS84 (EPSG:4326), l'unité de mesure est le degré.
+
+```{r get_wms_raster crs}
+
+mnt <- get_wms_raster(x = penmarch,
+                      layer = "ELEVATION.ELEVATIONGRIDCOVERAGE", 
+                      res = 0.0005,
+                      crs = 4326,
+                      rgb = FALSE)
+
+tm_shape(mnt)+
+  tm_raster()+
+tm_shape(penmarch)+
+  tm_borders("black", lwd = 2)
+
+
+
+```
+
+# APIcarto
+
+Les API Carto sont mise à disposition par l'IGN pour faciliter le remplissage de formulaire. Elles ont l'avantages de ne pas nécessairement avoir besoin d'une shape en entrée. happign permet de se connecter à ces APIs à l'aide des fonctions `get_apicarto_*`. Toutes ces fonctions sont vectorisées, ainsi chaque paramètre peut prendre plusieurs valeurs.
+
+## APIcarto cadastre
+
+Données récupérables à parti du code insee, code département ou d'une shape.
+
+-   parcelles cadastrales
+-   communes
+-   feuille
+-   division
+-   localisant
+
+```{r api cadastre}
+
+com <- get_apicarto_cadastre(c("29158", "29165"), type = "commune")
+
+# com <- get_apicarto_cadastre("29158", type = "parcelle", section = "AB", numero = "0001")
+
+tm_shape(com)+
+  tm_polygons()
+
+```
+
+## APIcarto codes postaux
+
+Permet de récupérer le code insee et nom d'une commune à partir du code postal.
+
+```{r api codes postaux}
+
+code_post <- get_apicarto_codes_postaux(c("29760", "29260"))
+
+```
+
+## APIcarto Géoportail de l'Urbanisme
+
+API connectée au géoportail de l'urbanisme permettant de récupérer divers documents d'urbanisme, prescriptions et servitudes d'utilités publiques (Cône de vue, Alignement d'arbre, Canalisations de transport de gaz, Espace boisé classé, Carrières, Périmètres monuments historiques, ...)
+
+Carte des Espaces Boisés Classés et des alignements d'arbres :
+
+```{r api gpu}
+
+prescriptions <- get_apicarto_gpu("DU_93014",
+                                  ressource = c("prescription-surf", "prescription-lin"))
+
+
+
+ebc <- prescriptions[prescriptions$libelle == "EBC", ]
+align_arbre <- prescriptions[prescriptions$libelle == "Alignement d'arbre", ]
+
+com <- get_apicarto_cadastre("93014", "commune")
+
+tm_shape(com)+
+  tm_borders(lwd = 2)+
+tm_shape(ebc)+
+  tm_fill("firebrick")+
+tm_shape(align_arbre)+
+  tm_lines("purple")
+
+```
+
+## APIcarto Registre Parcellaire Graphique
+
+Remarque : Bien souvent, les APIcarto ne prennent pas ne charge les géometries trop complexes. La paramètre dTolerance permet de simplifier temporairement la géométrie.
+
+```{r api rpg}
+
+penmarch <- get_apicarto_cadastre("29158", type = "commune")
+
+rpg <- get_apicarto_rpg(penmarch, 2020, dTolerance = 10) |> 
+  st_make_valid()
+
+tm_shape(penmarch)+
+  tm_borders(lwd = 2)+
+tm_shape(rpg)+
+  tm_polygons("code_cultu")
+
+```
+
+## Les données LIDAR
+
+Indisponible pour le moment !
+
+## Exemple
+
+## Altimetrie
+
+Dans cet exemple, le MNT et le MNS permettent de calculer le MNH. Les courbes de niveau sopnt également rajoutées.
+
+```{r altimetrie}
+
+shp <- get_apicarto_cadastre("35211", "commune")
+
+layers <- get_layers_metadata("wms-r", "altimetrie")
+
+mnt_layer <- layers[3,1]
+mns_layer <- layers[4,1] 
+
+mnt <- get_wms_raster(shp, mnt_layer, res = 10, crs = 2154, rgb = FALSE, verbose = FALSE)
+mns <- get_wms_raster(shp, mns_layer, res = 10, crs = 2154, rgb = FALSE, verbose = FALSE)
+
+# Calculate digital height model i.e. tree height
+mnh <- mns - mnt
+mnh[mnh < 0] <- NA  # Remove negative value
+
+level_curve <- get_wfs(shp, "ELEVATION.CONTOUR.LINE:courbe",
+                       spatial_filter = "intersects")
+level_curve_intersect <- st_intersection(level_curve, shp)
+
+tm_shape(mnh) +
+  tm_raster(col.scale = tm_scale_continuous(value.na = "grey", values = "-spectral"), 
+            col.legend = tm_legend("Height")) +
+tm_shape(level_curve_intersect)+
+  tm_lines(col = "black")+
+tm_shape(shp)+
+   tm_borders(lwd = 2, col = "red")
+
+```
