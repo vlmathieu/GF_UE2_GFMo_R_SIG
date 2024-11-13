@@ -1,0 +1,499 @@
+---
+title: "Projet R"
+author: "Tifaine CATTANEO, Loris GONZALEZ, Ella Pidoux, Marion VERGNOL"
+date: "2024-09-10"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE, warning = TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction 
+
+## Contexte : pourquoi ce script
+
+  Une hausse de la fréquentation des forêts et une sensibilisation accrue des administrés aux enjeux environnementaux implique aujourd'hui, pour le gestionnaire, un changement de gestion. Ce script permet d'adapter les coupes et travaux aux forêts les plus exposées au public, et, à l'échelle de la forêt, d'avoir une gestion différenciée aux abords des routes, parkings et points d'eau. 
+
+## Ce que fait notre script
+
+ Ce script permet de connaître les parkings dans la forêt et à 500 m autour. 
+A partir de ces parkings, des isochrones ont été tracées pour connaître toutes les villes de plus de 5000 habitants situées à 30 minutes en voiture. Les habitants de ces différentes villes ont été sommées, pour évaluer le nombre de visiteurs potentiels. 
+L'impact des routes et des parkings a aussi été pris en compte. Trois zones ont été tracées en fonction de la distance à ces infrastructures. Cela permet au gestionnaire de connaitre les zones les plus exposées au public, mais aussi des connaître les zones du massif où la biodiversité est soumise à des pressions (sonores ou présence de déchets par exemple). 
+Des Buffers ont aussi été tracés autour des points d'eau afin de mettre en avant les zones d'intérêt pour le public, devant ainsi faire l'objet d'une attention particulière. 
+
+
+
+``` {r installation et mise a jour des packages }
+# install.packages(librarian) #si pas déjà installé
+librarian::shelf(happign,  # pour les données Web et IGN
+                 osmdata,   # pour manipuler les données d'openstreetmap
+                 osrm,  # pour manipuler les données d'openstreetmap
+                 sf,  # pour manipuler les données vecteurs
+                 tmap,  # pour la visualisation des cartes
+                 dplyr)  # pour manipuler les données dans les tables
+
+tmap_mode("view")  # passe en mode interactif pour l'affichage des cartes
+
+```
+
+# Choix de la forêt
+
+  Le gestionnaire peut choisir la forêt qu'il a à sa charge grâce à mapedit et la surface de celle-ci sera générée :
+  
+```{r choix de la forêt}
+point_foret <- mapedit::drawFeatures()
+surface_foret <- get_wfs(x = point_foret,
+                         layer = "BDTOPO_V3:foret_publique")
+```
+
+# Villes de plus 5000 habitants à proximité de la forêt
+
+  Afin d'aider le gestionnaire dans les choix de gestion en forêt, il convient de connaître le nombre de visiteurs potentiels, et ainsi la pression de fréquentation qui en découle. Pour cela, le nombre d'habitant des communes  alentour a été relevé. Les parkings à 500 m de la forêt ont été identifiés grâce à des buffers, puis les villes à moins de 30 minutes en voiture grâce à des isochrones. Le nombre d'habitant provient de données IGN (la carte "LIMITES_ADMINISTRATIVES_EXPRESS.LATEST:commune"). 
+Le choix a été fait de garder seulement les villes de plus de 5000 habitants. 
+
+```{r surface de 500m autour de la surface de la forêt}
+surface_rech_parking <- st_buffer(surface_foret,
+                                  500)
+bbox_foret <- st_bbox(surface_rech_parking)
+query_parking <- opq(bbox = bbox_foret) |>
+  add_osm_feature(key = 'amenity',
+                  value = c('parking'))
+
+# Création d'une couche vecteur avec les points de parking
+osm_parking <- osmdata_sf(query_parking)
+parking_sf <- osm_parking$osm_points
+
+# Suppression des points au-delà de la zone de recherche (forêt et 500m autour)
+parking_foret <- st_intersection(parking_sf["geometry"],
+                                 surface_rech_parking["geometry"])
+
+
+```
+
+  Les points de parking ont été récupérés sur OpenStreetMap (OSM) pour la surface de la forêt et sur une distance de 500 m autour. En effet, il a été considéré que les visiteurs peuvent laisser leurs véhicules jusqu'à à cette distance dans le but de se promener en forêt. Néanmoins, le fichier OSM contenait souvent plusieurs points pour un même parking. Il a donc été nécessaire de les regrouper en utilisant la méthode du clustering. 
+
+```{r regroupement des points des parkings}
+# Regrouper les points situés à moins de 200m les uns des autres et création
+# d'un unique point centroïde pour les nouveaux groupements
+
+# Création pour chaque point de parking d'une liste de points de parking situés
+# à moins de 200m
+dist_parking <- st_is_within_distance(parking_foret,
+                                      dist = 200)
+
+# Crééation d'un vecteur vide de longueur le nombre de points de parking
+clusters <- rep(NA, length(dist_parking))
+
+# Attribution d'un numéro à chaque groupe de points de parking à moins de 200m
+cluster_id <- 1
+for (i in seq_along(dist_parking)) {  # on parcours la liste des parking
+  if (is.na(clusters[i])) {
+    clusters[i] <- cluster_id  # si le point n'a pas déjà un n° de cluster on
+    # lui donne le n° actuel
+    queue <- dist_parking[[i]]  # on crée une liste avec les voisins identifiés
+    # à moins de 200m
+    while (length(queue) > 0) {
+      j <- queue[1]
+      queue <- queue[-1]
+      if (is.na(clusters[j])) {  # on vérifie que le point n'est pas déjà dans
+        # dans un autre groupe et on l'ajoute au groupe actuel
+        clusters[j] <- cluster_id
+        queue <- c(queue, dist_parking[[j]])
+      }
+    }
+    cluster_id <- cluster_id + 1  # on passe au groupe de points suivant
+  }
+}
+
+parking_foret$cluster_id <- clusters  # on crée une colonne avec les n° de groupe
+
+groupe_parking <- parking_foret %>%  # on calcule le centroïde de chaque groupe
+  # de points avant de les fusionner
+  group_by(cluster_id) %>%
+  summarise(geometry = st_centroid(st_combine(geometry))) %>%
+  ungroup()
+
+# Visualisation des points de parking
+qtm(groupe_parking)
+```
+
+Après avoir récupéré les points des parkings sans doublons, il a été possible d'y appliquer des isochrones pour récupérer toutes les zones autour de la forêt atteignables en moins de 30 minutes en voiture. Il s'agit du temps maximum estimé qu'une famille est prête à faire pour une balade en forêt. A partir du  polygone ainsi tracé, il a été possible de récupérer toutes les villes de plus de 5000 habitants à proximité de la forêt. Ensuite une catégorisation des villes a été faite ; plus la ville a une population élevée, plus elle représente des visiteurs potentiels. 
+
+
+```{r categorisation villes}
+# Calcul des isochrones de 30 min en voiture des parking de la forêt
+iso_30 <- osrmIsochrone(groupe_parking["geometry"],
+                        breaks = 30,
+                        res = 20)
+
+# Récupération des informations des communes dans l'isochrone
+commune_iso <- get_wfs(x = iso_30,
+                       layer = "LIMITES_ADMINISTRATIVES_EXPRESS.LATEST:commune")
+
+# Sélection des communes de plus de 5000 habitants
+commune_5000 <- commune_iso[commune_iso$population >= 5000, ]
+
+# Pression des communes selon le nombre d'habitants 
+ptit_commune <- commune_5000[commune_5000$population <= 7000, ]
+moy_commune <- commune_5000[commune_5000$population > 7000 & commune_5000$population <= 10000, ]
+grde_commune <- commune_5000[commune_5000$population > 10000, ]
+
+# Visualisation de la classification des communes
+# (Possibilité de former un buffer autour des limites communales)
+
+# Fonction pour la création d'un buffer de x mètres et choix des couleurs
+buffer.points <- function(sf, x, color){
+  buffer <- st_buffer(sf, x)
+  map <- tm_shape(buffer) + tm_polygons(col = color)
+}
+
+pression_commune <- buffer.points(ptit_commune, x = 0, color = "green") +
+  buffer.points(moy_commune, x = 0, color = "yellow") +
+  buffer.points(grde_commune, x = 0, color = "red")
+
+pression_commune
+
+# Calcul du nombre total d'habitants dans les villes de l'isochrone
+nb_hab_pression <- sum(commune_5000[["population"]])
+nb_hab_pression
+```
+
+# Identification des infrastructures routières à proximité et à l'intérieur de la forêt
+
+De plus en plus d'infrastructures morcellent la forêt française. Leur utilisation par le grand public attire de nombreux véhicules dans les massifs et à leurs abords. Le gestionnaire doit désormais prendre en compte l'aspect paysager durant ses interventions sylvicoles. Pour cela, des buffers ont été tracés autour des routes pour permettre d'adapter la gestion en forêt. L'IGN classe les routes selon un ordre d'importance différent de celui utilisé habituellement par l'administration. En effet, l'IGN classifie le système routier selon l'importance du trafic. 
+Les buffers font donc des tailles différentes selon la catégorie du tronçon : 
+  - importance 1 : liaison entre métropoles. 
+  - importance 2 : liaison entre départements.
+  - importance 3 : liaison entre communes d'un même département.
+  - importance 4 : liaison à l'intérieur d'une commune permettant de se déplacer rapidement. 
+  - importance 5 : autres liaisons circulables. 
+
+L'importance 6 a été laissée de côté étant des sentiers non utilisables par des véhicules motorisés. 
+
+Des fonctions ont été codées afin de faciliter la mise en place des buffers et leur visualisation. 
+
+```{r fonctions utilisées}
+# Fonction qui crée un buffer de distance x m en fonction de l'importance y de
+# la route
+buffer.route.taille <- function(sf, y, x){
+  routes <- subset(sf,
+                   sf$importance == y)
+  buffer <- st_buffer(routes,
+                      dist = x)
+  
+  if (!is_empty_sf(buffer)) {
+    return(buffer)
+  } 
+}
+
+# Fonction pour vérifier que le sf est vide
+is_empty_sf <- function(sf) {
+  return(nrow(sf) == 0)
+}
+
+# Fonction pour visualisation d'un buffer de distance x mètres pour une route
+# d'importance y et attribution d'une couleur
+buffer.taille.couleur <- function(sf, y, x, color){
+  routes <- subset(sf,
+                   sf$importance == y)
+  buffer <- st_buffer(routes,
+                      dist = x)
+  
+  if (!is_empty_sf(buffer)) {
+    return(tm_shape(buffer) + tm_polygons(col = color))
+  } 
+}
+
+# Fonction de visulation avec couleur des buffers de routes
+buffer.diff.routes <- function(sf) {
+  # initialisation de la carte avec les bordures
+  map <- tm_shape(surface_foret) + 
+    tm_borders(col = 'black')
+  
+  # ajouter les buffers de taille et couleur différentes
+  map <- map + buffer.taille.couleur(sf, 1, 150, 'red')
+  map <- map + buffer.taille.couleur(sf, 2, 100, 'orange')
+  map <- map + buffer.taille.couleur(sf, 3, 80, 'yellow')
+  map <- map + buffer.taille.couleur(sf, 4, 50, 'cyan')
+  map <- map + buffer.taille.couleur(sf, 5, 20, 'green')
+  
+  # afficher la carte
+  print(map)
+}
+```
+
+```{r impact des routes}
+# Faire nouvelle surface de recherche des routes dans la forêt et à 50m autour
+# (pour inclure les routes longeant les limites de la forêt sans les croiser)
+surface_rech_route <- st_buffer(surface_foret,
+                                50)
+
+# Sélection des routes traversant et longeant la forêt
+route_foret <- get_wfs(surface_rech_route,
+                        "BDTOPO_V3:troncon_de_route",
+                        spatial_filter = "intersects") 
+
+# Création de buffer selon la nature des routes
+# importance 1 = liaison entre métropoles
+route_imp1 <- buffer.route.taille(route_foret, 1, 150)
+# importance 2 = liaison entre départements
+route_imp2 <- buffer.route.taille(route_foret, 2, 110)
+# importance 3 = liaison entre communes dans un même département
+route_imp3 <- buffer.route.taille(route_foret, 3, 100)
+# importance 4 = voies rapides dans une commune
+route_imp4 <- buffer.route.taille(route_foret, 4, 80)
+# importance 5 = routes dans une commune 
+route_imp5 <- buffer.route.taille(route_foret, 5, 50)
+
+# Visualisation de la pression des routes
+pression_routes <- buffer.diff.routes(route_foret)
+
+# Message d'avis possible : st_as_s2(): dropping Z and/or M coordinate
+# A ne pas prendre en compte car la coodinate z n'existe pas dans notre étude
+
+pression_routes
+```
+
+# Pression du grand public autour des parkings
+
+  Après avoir visualisé l'importance des routes pour le gestionnaire dans sa gestion du paysage forestier, il est nécessaire de prendre en considération l'impact des parkings dans les actions de gestion. En effet, autour de ces parkings dans un rayon plus ou moins large, la fréquentation des visiteurs peut générer des installations pour l'accueil du public ou des adaptations dans le déroulé des interventions sylvicoles. 
+Il a été considéré qu'une pression plus forte se fait sur un rayon de 500 m autour du parking, une pression moins élevée ensuite sur les 250m suivant, et encore plus faible jusqu'à 1 km depuis le point de parking.
+
+```{r pression parking}
+# Fonction qui crée des buffers de pression qui se cumulent en distance
+pression.buffer <- function(sf){
+  grde_pression <- st_buffer(sf, 500)
+  moy_pression <- st_buffer(grde_pression, 250)
+  ptit_pression <- st_buffer(moy_pression, 250)
+  return(list(
+    grde_pression = grde_pression,
+    moy_pression = moy_pression,
+    ptit_pression = ptit_pression
+  ))
+}
+
+# Buffer de pression du grand public autour des parkings 
+pression_gp_parking <- pression.buffer(groupe_parking)
+
+# Accéder aux buffers de pression des parking
+grde_pression_parking_sf <- pression_gp_parking$grde_pression
+moy_pression_parking_sf <- pression_gp_parking$moy_pression
+ptit_pression_parking_sf <- pression_gp_parking$ptit_pression
+
+# Visualisation des buffers parking
+map <- tm_shape(surface_foret) + 
+  tm_borders(col = 'black')
+map <- map + tm_shape(ptit_pression_parking_sf) + tm_polygons(col = 'green')
+map <- map + tm_shape(moy_pression_parking_sf) + tm_polygons(col = 'orange')
+map <- map + tm_shape(grde_pression_parking_sf) + tm_polygons(col = 'red')
+
+map
+
+```
+
+# Visualisation des sentiers
+
+  Pour pouvoir gérer l'affluence en forêt et identifier les zones exposées au public, le tracé des sentiers a été récupéré à partir de la "BDTOPO_V3:troncon_de_route". Cela permet là encore au gestionnaire d'identifier les zones exposées à la vue du public, et d'adapter les coupes et travaux en conséquence.
+  Les données des sentiers ont également été extraites d'openstreetmap afin de comparer avec les sentiers référencés par l'IGN et utilisés précédement.
+
+```{r frequentation des chemins}
+# Données pédestres issues de l'IGN
+troncons <- get_wfs(x = surface_foret,
+                    layer = "BDTOPO_V3:troncon_de_route",
+                    spatial_filter = "intersects")
+
+chemin_foret <- troncons[troncons$nature %in% c("Sentier",
+                                                "Chemin",
+                                                "Route empierrée"), ]
+
+# Message d'avis possible : st_as_s2(): dropping Z and/or M coordinate
+# A ne pas prendre en compte car la coodinate z n'existe pas dans notre étude
+
+chemin_freq <- st_intersection(chemin_foret["geometry"],
+                               pression_gp_parking$ptit_pression["geometry"])
+
+# Visualisation des chemins les plus fréquentés
+qtm(chemin_freq)
+
+
+# Comparaison avec les données openstreetmap
+query_chemin_osm <- opq(bbox = bbox_foret) |>
+  add_osm_feature(key = 'highway',
+                  value = c('track',  # route à usage forestier ou agricole
+                            'cycleway',  # voie vélo
+                            'footway',  # sentier pédestre
+                            'bridleway',  # sentier équestre
+                            'path'))  # sentier non spécifique
+
+osm_chemin <- osmdata_sf(query_chemin_osm)
+chemin_osm_sf <- osm_chemin$osm_lines  
+
+chemin_osm_foret <- st_intersection(chemin_osm_sf["geometry"],
+                                    surface_foret["geometry"])
+chemin_osm_freq <- st_intersection(chemin_osm_foret["geometry"],
+                                   pression_gp_parking$ptit_pression["geometry"]) 
+
+# Visualisation des chemins osm les plus fréquentés
+qtm(chemin_osm_freq)
+```
+
+# Visualisation des points d'eau 
+
+  Dans la même logique que pour les sentiers que l'on trouve en forêt, les points d'eau comme les rivières et les lacs ont été relevés afin de permettre au gestionnaire d'identifier les zones éventuelles de passage de visiteurs. En effet, il a été considéré que la population se plaisait à marcher autour de ces espaces spécifiques pour apprécier son côté paisible. Ces zones délimitées pourront permettre aux forestiers de réfléchir à l'installation de sentiers plus ou moins larges pour accueillir le public ou non.
+  Les données des éléments hydrologiques ont également été extraits de l'IGN afin de les comparer avec les données d'openstreetmap.
+  
+```{r visualisation point eau}
+# Récupération des données d'openstreetmap
+query_water <- opq(bbox = bbox_foret) |>
+  add_osm_feature(key = 'water',
+                  value = c('river',  # rivière
+                            'oxbox',  # méandre
+                            'canal',  # canal
+                            'ditch',  # fossé
+                            'lake',  # lac
+                            'reservoir',  # lac artificiel
+                            'pond',  # petit lac artificiel
+                            'stream_pool'))  # petite gorge
+
+query_waterway <- opq(bbox = bbox_foret) |>
+  add_osm_feature(key = 'waterway',
+                  value = c('stream',  # ruisseau
+                            'watefall'))  # cascade
+
+query_natural <- opq(bbox = bbox_foret) |>
+  add_osm_feature(key = 'natural',
+                  value = c('water'))  # masse d'eau naturelle
+
+# Fusion des éléments "eau" obtenus avec les  key différentes
+all_eau <- c(osmdata_sf(query_water),
+             osmdata_sf(query_waterway),
+             osmdata_sf(query_natural))
+
+# Création d'une couche vecteur selon la nature des éléments "eau"
+all_eau_points_sf <- all_eau$osm_points
+all_eau_lignes_sf <- all_eau$osm_lines
+all_eau_polygones_sf <- all_eau$osm_polygons
+
+# Sélection des éléments "eau" dans la forêt et à 1km autour des parking
+all_eau_points_foret <- st_intersection(all_eau_points_sf["geometry"],
+                                        surface_foret["geometry"])
+all_eau_points_parking <- st_intersection(all_eau_points_foret["geometry"],
+                                          pression_gp_parking$ptit_pression["geometry"])
+
+all_eau_lignes_foret <- st_intersection(all_eau_lignes_sf["geometry"],
+                                        surface_foret["geometry"])
+all_eau_lignes_parking <- st_intersection(all_eau_lignes_foret["geometry"],
+                                          pression_gp_parking$ptit_pression["geometry"])
+
+all_eau_polygones_foret <- st_intersection(all_eau_polygones_sf["geometry"],
+                                           surface_foret["geometry"])
+all_eau_polygones_parking <- st_intersection(all_eau_polygones_foret["geometry"],
+                                             pression_gp_parking$ptit_pression["geometry"])
+
+# Visualisation des différents éléments "eau" à moins d'1km des parking
+# Message d'erreur peut apparaître lors de la visualisation si pas de points d'eau
+  if (!is_empty_sf(all_eau_points_parking)) {
+    return(qtm(all_eau_points_parking))
+  } 
+  if (!is_empty_sf(all_eau_lignes_parking)) {
+    return(qtm(all_eau_lignes_parking))
+  }
+  if (!is_empty_sf(all_eau_polygones_parking)) {
+    return(qtm(all_eau_polygones_parking))
+  } 
+
+
+# Comparaison avec les données de l'IGN 
+cours_eau <- get_wfs(surface_foret,
+                     "BDTOPO_V3:cours_d_eau",
+                     spatial_filter = "intersects") 
+plan_eau <- get_wfs(surface_foret,
+                    "BDTOPO_V3:plan_d_eau",
+                    spatial_filter = "intersects") 
+detail_eau <- get_wfs(surface_foret,
+                      "BDTOPO_V3:detail_hydrographique",
+                      spatial_filter = "intersects")
+
+cours_eau_foret <- st_intersection(cours_eau["geometry"],
+                                   surface_foret["geometry"])
+plan_eau_foret <- st_intersection(plan_eau["geometry"],
+                                  surface_foret["geometry"])
+detail_eau_foret <- st_intersection(detail_eau["geometry"],
+                                    surface_foret["geometry"])
+
+cours_eau_parking <- st_intersection(cours_eau_foret["geometry"],
+                                     pression_gp_parking$ptit_pression["geometry"])
+plan_eau_parking <- st_intersection(plan_eau_foret["geometry"],
+                                    pression_gp_parking$ptit_pression["geometry"])
+detail_eau_parking <- st_intersection(detail_eau_foret["geometry"],
+                                      pression_gp_parking$ptit_pression["geometry"])
+
+# Visualisation des éléments "eau" de l'IGN à moins d'1km des parking
+  if (!is_empty_sf(cours_eau_parking)) {
+    return(qtm(cours_eau_parking))
+  } 
+  if (!is_empty_sf(plan_eau_parking)) {
+    return(qtm(plan_eau_parking))
+  } 
+  if (!is_empty_sf(detail_eau_parking)) {
+    return(qtm(detail_eau_parking))
+  } 
+```
+
+# Passage sur le SIG 
+
+  Afin de pouvoir produire des cartes présentables aux élus et/ou à d'autres forestiers, il est nécessaire de créer un géopackage regroupant l'ensemble des couches produites durant cette étude. Ce faisant, il ne restera plus qu'au gestionnaire de choisir sa symbologie selon ses habitudes afin d'obtenir des cartes claires et précises. 
+
+```{r Passage SIG}
+# Fonction permettant l'enregistrement dans un géopackage
+
+sauvegarde.gpkg <- function(nom_gpkg) {
+  # Liste des objets sf et leurs noms
+  sf_layers <- list(
+    surface_foret = "surface_foret",
+    groupe_parking = "groupe_parking",
+    grde_pression_parking_sf = "grde_pression_parking_sf",
+    moy_pression_parking_sf = "moy_pression_parking_sf",
+    ptit_pression_parking_sf = "ptit_pression_parking_sf",
+    iso_30 = "iso_30",
+    commune_5000 = "commune_5000",
+    route_foret = "route_foret",
+    chemin_foret = "chemin_foret",
+    chemin_freq = "chemin_freq",
+    chemin_osm_foret = "chemin_osm_foret",
+    chemin_osm_freq = "chemin_osm_freq",
+    route_imp1 = "route_imp1",
+    route_imp2 = "route_imp2",
+    route_imp3 = "route_imp3",
+    route_imp4 = "route_imp4",
+    route_imp5 = "route_imp5",
+    all_eau_lignes_parking = "all_eau_lignes_parking",
+    all_eau_polygones_parking = "all_eau_polygones_parking",
+    cours_eau_parking = "cours_eau_parking",
+    plan_eau_parking = "plan_eau_parking",
+    detail_eau_parking = "detail_eau_parking"
+  )
+
+  for (sf_name in names(sf_layers)) {
+    obj <- tryCatch(get(sf_name), error = function(e) NULL)  # Récupère l'objet ou retourne NULL si inexistant
+    if (!is.null(obj) && !is_empty_sf(obj)) {
+      st_write(st_transform(obj, 2154), 
+               nom_gpkg, 
+               layer = sf_layers[[sf_name]])
+    }
+  }
+}
+
+# Chemin d'accès où sera enregistré le gpkg
+getwd()
+
+dossier_gpkg <- sauvegarde.gpkg("impact_freq.gpkg")
+```
+  
+
+# Conclusion 
+
+  Il a été observé plusieurs points pouvant excercer différents types de pression sur la forêt étudiée. Le gestionnaire, grâce à ces données et aux cartes générées sur SIG, peut alors agir en conséquence pour produire un plan d'aménagement cohérent et en prenant en compte le regard du public et des conséquences de leur passage en forêt. 

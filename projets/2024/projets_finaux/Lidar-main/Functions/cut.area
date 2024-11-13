@@ -1,0 +1,4 @@
+cut.area = function(laz, liste){
+  clip = clip_rectangle(laz, liste[1], liste[2], liste[3], liste[4])
+  return(clip)
+}

@@ -1,0 +1,403 @@
+---
+title: Télédétection des cloisonnements d'exploitation forestière à partir de données
+  LiDAR
+author: "Armange Tristan, Gerval Thomas, Magnier Mathieu, Marie Gabriel"
+date: "2024-09-09"
+output:
+  html_document:
+    df_print: paged
+---
+  
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+# Introduction
+
+Les cloisonnements sont des outils sylvicoles important pour lutter contre le tassement des sols forestiers et préserver leur productivité. En effet, en fonction de la texture su sol, le tassement peut être plus ou moins important lors du passage des engins et ainsi réduire la porosité et donc la réserve utile en eau du sol. Cependant, il n’existe pas de carte accessible de ces cloisonnements lorsqu’ils existent. Ceux-ci peuvent alors être perdus avec le temps. L’utilisation du LiDAR (Light Detection And Ranging) semble être une solution. Le LiDAR consiste en une mesure de distance par détection de la lumière *(IGN, 2021)*. Actuellement, en France un projet de LiDAR (LiDAR HD), vise à cartographier l’ensemble du territoire avec une haute densité (10 points par m²) *(IGN, 2021)*, pour le moment 2/3 du territoire a été survolé. Ainsi cela mène à la question suivante : Comment déterminer les cloisonnements grâce à des données LiDAR ?
+
+
+# Matériel et Méthode
+## Origine des données et zone d'étude
+La base de données de l'IGN offre en libre accès les données issues de ses survols LiDAR. Ces nuages de points possèdent de nombreux paramètres : coordonnées spatiales (X, Y, Z) et temporelle, intensité et nombre de retours, etc... Les fichiers sont de types .las ou .laz *(Figure 1)*. Pour tester et ajuster le modèle plusieurs forêts de natures variées ont été testées. Au final 3 forêts ont été retenus pour montrer les réussites et limites du modèle : une plantation de pin dans les landes, une forêt de feuillus en Somme dont les cloisonnements sont connus et une forêt de feuillus en Haut-Languedoc.
+
+
+```{r, echo = FALSE, fig.cap = "Figure 1 : Fichier .las de la zone en Somme", fig.align = 'center'}
+knitr::include_graphics("https://drive.google.com/uc?export=view&id=184i28akKdegkB3oIzVIXx5SZhFLdy9Zx")
+```
+
+## Récupération des données sur R
+### Packages
+La plus grande partie du travail a été effectué sur Rstudio. Le traitement s'est appuyé sur de nombreuses fonctions déjà disponibles dans des packages adaptés aux données manipulées.\
+Le package principal est [`lidR`](https://github.com/r-lidar/lidR) qui permet de réaliser de nombreuses opérations sur les fichiers LiDAR. Afin de passer de ces fichiers 3D à un format 2D adaptée à la cartographie, on utilise la fonction `lidR::rasterize()`, puis le package [`terra`](https://github.com/rspatial/terra), R permet de réaliser des opérations sur les rasters ainsi créés.
+
+### Chemin d'accès 
+Une première manipulation simple permet d'automatiser les chemins d'accès de l'utilsateur et éviter des erreurs de lecture par la suite : 
+```
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+dir <- getwd()
+```
+
+### Extraction des données
+La première étape consiste à récupérer les coordonnées de la zone étudiée. L'utilisation de la fonction `drawFeatures()` du package `mapedit` permet de demander à l'utilsateur d'encadrer directement sur une carte interactive la zone souhaitée. La zone doit impérativement faire partie des zones couvertes par LiDAR HD, dans le cas contraire la fonction suivante (download.lidar()) renverra une erreur.
+```
+draw.area = function(){
+  zone = st_coordinates(st_transform(mapedit::drawFeatures(), crs = 2154))
+  y1 = min(zone[, 2])
+  x1 = min(zone[, 1])
+  y2 = max(zone[, 2])
+  x2 = max(zone[, 1])
+  return(c(x1,y1,x2,y2))
+}
+```
+Une fois la zone dessinée les coordonnées du coin bas gauche et haut droit sont retenues.\
+\
+L'étape d'après consiste à télécharger les tuiles de l'IGN correspondant à la zone d'étude. Cette étape s'appuie sur l'utilisation du package jsonlite qui va récupérer le lien de téléchargement de la tuile correspondant aux coordonées, qui sera ensuite téléchargée grâce à download.file() au format .laz, qui est le format compressé du .las. Une fonction utilisant une API, dans le package `lidR` existait pour récupérer les données mais ce dernier ne fonctionne pas dû à une modification du site géoservice. La solution apportée permet donc de contourner ce problème, mais les liens n'étant pas pérennes, le risque que ceux-ci expirent subsiste.
+
+```
+download.lidar = function(x1, y1, x2, y2) {
+  # Créer une séquence de coordonnées avec un pas de 10000
+  x = seq(x1, x2, 10000)
+  y = seq(y1, y2, 10000)
+  
+  # Boucle à travers toutes les combinaisons de x et y
+  for (i in x) {
+    for (j in y) {
+      # Construire l'URL pour obtenir les données JSON
+      json_url <- paste0("https://data.geopf.fr/private/wfs/?service=WFS&version=2.0.0&apikey=interface_catalogue&request=GetFeature&typeNames=IGNF_LIDAR-HD_TA:nuage-dalle&outputFormat=application/json&bbox=", 
+                         i, ",", j, ",", i, ",", j)
+      print(paste("Fetching JSON from:", json_url))
+      
+      # Essayer de récupérer les données JSON
+      tryCatch({
+        json = fromJSON(txt = json_url)
+        
+        # Récupérer le lien du fichier .laz à partir des propriétés du JSON
+        lien = json[["features"]][["properties"]][["url"]][1]
+        
+        if (!is.null(lien)) {  # Vérifier que le lien n'est pas nul
+          print(paste("Downloading .laz file from:", lien))
+          
+          # Téléchargement du fichier .laz avec mode binaire
+          download.file(lien, 
+                        destfile = paste0("dir", i, "_", j, ".laz"),
+                        mode = "wb")  # "wb" pour mode binaire
+          
+          print(paste("Saved file:", paste0(i, "_", j, ".laz")))
+        } else {
+          print("No valid link found in the JSON response.")
+        }
+      }, error = function(e) {
+        print(paste("Error fetching or downloading data for bbox:", i, j))
+        print(e)  # Affiche l'erreur rencontrée
+      })
+    }
+  }
+}
+```
+Partie 1 : Définition de la fonction et création des séquences
+
+```r
+download.lidar = function(x1, y1, x2, y2) {
+  x = seq(x1, x2, 10000)
+  y = seq(y1, y2, 10000)
+```
+
+Cette partie définit la fonction `download.lidar` qui prend quatre paramètres : `x1`, `y1`, `x2`, et `y2`. Ces paramètres représentent les coordonnées des coins opposés de la zone géographique pour laquelle nous voulons obtenir des données LiDAR.
+
+Ensuite, deux séquences sont créées : `x` et `y`. Ces séquences sont générées à partir des paramètres d'entrée, avec un pas de 10000 m. Cela permet de diviser la zone géographique en une grille de points espacés de 10000 m (correspondant à la résolution des tuiles), qui seront utilisés pour interroger le service web de données LiDAR.
+
+Partie 2 : Boucles d'itération sur les coordonnées
+
+```
+  for (i in x) {
+    for (j in y) {
+```
+
+Cette partie met en place deux boucles imbriquées qui vont itérer sur toutes les combinaisons possibles de coordonnées `x` et `y`. Chaque itération représente une tuile spécifique de la grille créée précédemment. Ces boucles permettent de parcourir systématiquement l'ensemble de la zone géographique définie.
+
+Partie 3 : Construction de l'URL pour la requête JSON
+
+```
+      json_url <- paste0("https://data.geopf.fr/private/wfs/?service=WFS&version=2.0.0&apikey=interface_catalogue&request=GetFeature&typeNames=IGNF_LIDAR-HD_TA:nuage-dalle&outputFormat=application/json&bbox=",
+                         i, ",", j, ",", i, ",", j)
+      print(paste("Fetching JSON from:", json_url))
+```
+
+Cette section construit l'URL nécessaire pour interroger le service web de données géographiques. L'URL est créée en utilisant les coordonnées actuelles (`i` et `j`) et inclut divers paramètres tels que le type de service, la version, la clé API, et le format de sortie souhaité (JSON). La fonction affiche ensuite l'URL construite, ce qui peut être utile pour le débogage ou le suivi du processus.
+
+Partie 4 : Récupération et traitement des données JSON
+
+```
+      tryCatch({
+        json = fromJSON(txt = json_url)
+        lien = json[["features"]][["properties"]][["url"]][1]
+        
+        if (!is.null(lien)) {
+          print(paste("Downloading .laz file from:", lien))
+```
+
+Cette partie utilise un bloc `tryCatch` pour gérer les erreurs potentielles lors de la récupération des données JSON. La fonction tente de récupérer les données JSON à partir de l'URL construite précédemment. Si la requête réussit, elle extrait l'URL du fichier .laz correspondant aux coordonnées actuelles. Si une URL valide est trouvée, la fonction affiche un message indiquant qu'elle va commencer le téléchargement du fichier .laz.
+
+Partie 5 : Téléchargement du fichier .laz
+
+```
+          download.file(lien,
+                        destfile = paste0("dir", i, "_", j, ".laz"),
+                        mode = "wb")
+          
+          print(paste("Saved file:", paste0(i, "_", j, ".laz")))
+        } else {
+          print("No valid link found in the JSON response.")
+        }
+      }, error = function(e) {
+        print(paste("Error fetching or downloading data for bbox:", i, j))
+        print(e)
+      })
+    }
+  }
+}
+```
+
+Cette dernière partie gère le téléchargement effectif du fichier .laz. Si une URL valide a été trouvée, la fonction utilise `download.file` pour télécharger le fichier, en spécifiant le mode binaire ("wb") pour assurer l'intégrité des données. Le fichier est sauvegardé avec un nom basé sur les coordonnées actuelles.
+
+Si aucun lien valide n'est trouvé dans la réponse JSON, un message d'erreur est affiché. De même, si une erreur se produit à n'importe quel moment pendant la récupération des données ou le téléchargement, la fonction affiche un message d'erreur et l'erreur elle-même, puis continue avec la paire de coordonnées suivante.
+
+Cette structure permet à la fonction de traiter systématiquement une grande zone géographique, en gérant les erreurs de manière à ce que le processus global ne soit pas interrompu par des problèmes ponctuels.\
+\
+Une fois les tuiles récupérées, elles ne peuvent pas être traitées en l'état du fait de leur taille (Georges-Leroy et al., 2014). L'emprise est donc ramenée à la valeur spécifiée au début par l'utilisateur.
+```
+cut.area = function(laz, liste){
+  clip = clip_rectangle(laz, liste[1], liste[2], liste[3], liste[4])
+  return(clip)
+}
+```
+
+Après ces différentes étapes un fichier .laz est créé et servira de base pour les différents traitements.
+
+## Détection des cloisonnements sur R
+
+La fonction `detect.cloiso()` est la fonction principale du code. Le principe est le suivant : plusieurs données sont extraites du fichier d'origine, puis, en attribuant des seuils à ces valeurs, les points sont classés et discriminés si le nombre de critères remplis est suffisant.\
+Le nombre de retours correspond au nombre de fois où le laser a croisé des éléments et a été renvoyé vers l'appareil. A priori un cloisonnement devrait avoir un faible nombre de retour puisque le couvert y est moins important que dans le reste de la parcelle.\
+```
+detect.cloiso <- function(laz, resolution = 1, threshold = 0.1, output_file = "cloisonnements.gpkg") {
+  if (is.null(laz) || npoints(laz) == 0) {
+    stop("Le fichier LAZ est vide ou n'a pas été chargé correctement.")
+  }
+  
+  # Calculer le nombre de retours
+  returns <- grid_metrics(laz, ~length(Z), res = resolution / 2)
+  names(returns) <- "num_returns"
+  
+  # MNH/mnt (Modèle Numérique de Hauteur)
+  mnt1 = grid_terrain(laz, res = resolution / 2, algorithm = tin())
+  laplacian_kernel <- matrix(c(1, 1, 1,
+                               1, -8, 1,
+                               1, 1, 1), 
+                             nrow = 3, ncol = 3)
+  
+  # Appliquer le filtre Laplacien au raster
+  mnt_sqrt <- focal(mnt1, w = laplacian_kernel, fun = sum, na.policy = "omit", pad = TRUE)
+  names(mnt_sqrt) <- "mnt"
+  norm = normalize_height(laz, mnt1)
+  mnh <- grid_canopy(norm, res = resolution / 2, algorithm = pitfree())
+  names(mnh) <- "mnh_height"
+  
+  
+  # Empiler les rasters pour les combiner
+  combined_stack <- raster::stack(returns, mnh, mnt_sqrt)
+  
+  # Convertir en data frame pour traitement
+  combined_df <- as.data.frame(combined_stack, xy = TRUE)
+  combined_df <- na.omit(combined_df)
+  
+  # Détecter les zones à faible densité, faible nombre de retours et faible hauteur
+  combined_df$low_returns <- ifelse(combined_df$num_returns < 6, 1, 0)
+  combined_df$low_mnh <- ifelse(combined_df$mnh_height < 3, 1, 0)
+  combined_df$low_mnt = ifelse(combined_df$mnt < quantile(combined_df$mnt, threshold, na.rm = TRUE), 1, 0)
+ 
+  # Détecter les cloisonnements avec une pondération
+  combined_df$cloisonnement <- with(combined_df, (low_returns * 0.33 + low_mnh * 0.33 + low_mnt * 0.33) > 0.65)
+  
+  # Filtrer les zones de cloisonnements
+  cloisonnements_points <- combined_df[combined_df$cloisonnement, ]
+  
+  if (nrow(cloisonnements_points) > 0) {
+    # Convertir en objet spatial
+    cloisonnements_sf <- st_as_sf(cloisonnements_points, coords = c("x", "y"), crs = st_crs(laz))
+    
+    # Appliquer un buffer et dissoudre pour connecter les points proches
+    cloisonnements_buffer <- st_buffer(cloisonnements_sf, dist = resolution)
+    cloisonnements_dissolved <- st_union(cloisonnements_buffer)
+    
+    # Simplifier les lignes pour réduire le bruit
+    centerlines_simplified <- st_simplify(cloisonnements_dissolved, dTolerance = resolution / 2)
+    
+    # Lisser les lignes pour un résultat plus naturel
+    cloisonnements_smooth <- st_simplify(centerlines_simplified, dTolerance = resolution / 4)
+    
+    # Exporter au format GPKG
+    st_write(cloisonnements_smooth, output_file, driver = "GPKG", delete_layer = TRUE)
+    message("Cloisonnements exportés vers ", output_file)
+    
+    return(cloisonnements_smooth)
+  } else {
+    message("Aucun cloisonnement détecté.")
+    return(NULL)
+  }
+}
+```
+
+Partie 1 : Définition de la fonction et vérification initiale
+
+```
+detect.cloiso <- function(laz, output_file, resolution = 1, threshold = 0.1) {
+  if (is.null(laz) || npoints(laz) == 0) {
+    stop("Le fichier LAZ est vide ou n'a pas été chargé correctement.")
+  }
+```
+
+Cette partie définit la fonction `detect.cloiso` qui prend quatre paramètres : `laz` (le fichier LiDAR), `output_file` (le nom du fichier de sortie), `resolution` (par défaut 1), et `threshold` (ici choisi à 0,1). La fonction commence par vérifier si le fichier .laz est valide et contient des points. Si ce n'est pas le cas, elle arrête l'exécution avec un message d'erreur.
+
+Partie 2 : Calcul du nombre de retours et création du MNT
+
+```
+  returns <- grid_metrics(laz, ~length(Z), res = resolution / 2)
+  names(returns) <- "num_returns"
+  
+  mnt1 = grid_terrain(laz, res = resolution / 2, algorithm = tin())
+```
+
+Cette section calcule le nombre de retours LiDAR pour chaque cellule de la grille et crée un Modèle Numérique de Terrain (MNT) en utilisant l'algorithme TIN (Triangulated Irregular Network). La résolution utilisée est la moitié de celle spécifiée en paramètre.
+
+Partie 3 : Application du filtre Laplacien
+
+```
+  laplacian_kernel <- matrix(c(1, 1, 1,
+                               1, -8, 1,
+                               1, 1, 1), 
+                             nrow = 3, ncol = 3)
+  
+  mnt_sqrt <- focal(mnt1, w = laplacian_kernel, fun = sum, na.policy = "omit", 
+                    pad = TRUE)
+  names(mnt_sqrt) <- "mnt"
+  norm = normalize_height(laz, mnt1)
+```
+
+Cette partie crée et applique un filtre Laplacien au MNT pour détecter les changements brusques d'élévation. Ensuite, la hauteur des points LiDAR par rapport au MNT est normalisé.
+
+Partie 4 : Création du MNH et combinaison des rasters
+
+```
+  mnh <- grid_canopy(norm, res = resolution / 2, algorithm = pitfree())
+  names(mnh) <- "mnh_height"
+  
+  combined_stack <- raster::stack(returns, mnh, mnt_sqrt)
+  
+  combined_df <- as.data.frame(combined_stack, xy = TRUE)
+  combined_df <- na.omit(combined_df)
+```
+
+Cette section crée un Modèle Numérique de Hauteur (MNH) à partir des données normalisées. Elle combine ensuite tous les rasters créés (retours, MNH, MNT) en un seul, puis convertit ce raster en un dataframe pour faciliter le traitement ultérieur. Les valeurs NA sont supprimées pour éviter des erreurs.
+
+Partie 5 : Détection des zones de cloisonnement
+
+```
+  combined_df$low_returns <- ifelse(combined_df$num_returns < 6, 1, 0)
+  combined_df$low_mnh <- ifelse(combined_df$mnh_height < 3, 1, 0)
+  combined_df$low_mnt <- ifelse(combined_df$mnt < quantile(combined_df$mnt,
+                                                threshold, na.rm = TRUE), 1, 0)
+  
+  combined_df$cloisonnement <- with(combined_df,
+                  (low_returns * 0.33 + low_mnh * 0.33 + low_mnt * 0.33) > 0.65)
+  
+  cloisonnements_points <- combined_df[combined_df$cloisonnement, ]
+```
+
+Cette partie détecte les zones de cloisonnement en appliquant des seuils sur le nombre de retours, la hauteur du MNH et les valeurs du MNT. Elle combine ensuite ces critères avec une pondération pour identifier les zones de cloisonnement potentielles, ces seuils ont été définis de manière empirique.
+
+Partie 6 : Traitement spatial et export
+
+```
+  if (nrow(cloisonnements_points) > 0) {
+    cloisonnements_sf <- st_as_sf(cloisonnements_points, coords = c("x", "y"), 
+                                  crs = st_crs(laz))
+    
+    cloisonnements_buffer <- st_buffer(cloisonnements_sf, dist = resolution)
+    cloisonnements_dissolved <- st_union(cloisonnements_buffer)
+    
+    centerlines_simplified <- st_simplify(cloisonnements_dissolved,
+                                          dTolerance = resolution / 2)
+    
+    cloisonnements_smooth <- st_simplify(centerlines_simplified,
+                                         dTolerance = resolution / 4)
+    
+    st_write(cloisonnements_smooth, output_file, driver = "GPKG",
+             delete_layer = TRUE)
+    message("Cloisonnements exportés vers ", output_file)
+    
+    return(cloisonnements_smooth)
+  } else {
+    message("Aucun cloisonnement détecté.")
+    return(NULL)
+  }
+}
+```
+
+Cette dernière partie traite les points de cloisonnement détectés s'il y en a. Elle les convertit en objet spatial, applique un buffer pour fusionner les géométries proches, simplifie et lisse les lignes résultantes pour obtenir un résultat plus naturel. Enfin, elle exporte le résultat au format GPKG. Si aucun cloisonnement n'est détecté, elle affiche un message et retourne "NULL".
+
+
+## Détection des cloisonnements sur QGIS
+En plus des tentatives de détection des cloisonnements sur R, une deuxième approche sur QGis a été mise en place.
+L'automatisation est alors abandonnée au profit de l'adaptabilité d'un opérateur et d'une détéction plus précise. De plus certaines fonctions comme Voronoi sont plus simples d'utilisation sur QGis (R limitant très fortement la taille des rasters traités).\
+La fin du processus de détection nécessite l'interprétation des vecteurs créés qui est également optimisé par la visualisation sur QGIS.
+
+
+# Résultats
+
+
+## Détection des cloisonnements
+
+L’application de la fonction `detect.cloiso()` sur les différentes zones étudiées *(Figure2)* montre des résultats très hétérogènes. L’ajustement ayant été en grande partie réalisée sur la zone en Somme, c’est sur cette dernière que l’interprétation est la plus simple. Les zones de plus haute densité ne permettent généralement pas de détecter des cloisonnements et au contraire les routes et pistes plus larges sont détectées au même titre que les cloisonnements.
+La couche obtenue est exportée vers QGIS pour être interprétée directement par le gestionnaire. Les cloisonnements sont les lignes fines, régulièrement espacées et parallèles. 
+
+```{r, echo=FALSE, fig.cap = "Figure 2 : Application de la fonction detect.cloiso() sur les trois zones d'étude. De gauche à droite : Forêt du PNR Haut Languedoc, Forêt de Creuse dans la Somme, Forêt de résineux dans les landes"}
+knitr::include_graphics("https://drive.google.com/uc?export=view&id=1KBIgPd05gYWKF0e0Icea6pGEWomStboI")
+```
+
+## Transformation de Voronoi
+
+En plus de l'affichage précédent, une transformation peut être appliquée sur QGIS : la transformation de Voronoi (*Figure 3*) qui transforme les formes détectées en ligne en regroupant des points voisins de même nature. Les lignes de cloisonnements sont alors plus lisibles et le bruit réduit.
+
+```{r, echo=FALSE, fig.cap = "Figure 3 : Transformation de Voronoi sur les trois zones d'étude. De gauche à droite : Forêt du PNR Haut Languedoc, Forêt de Creuse dans la Somme, Forêt de résineux dans les landes"}
+knitr::include_graphics("https://drive.google.com/uc?export=view&id=173Vl3-aLCg7mSSnTUHI6ER6GRM-RoraM ")
+```
+
+## Comparaison des méthodes
+
+Avant d'aboutir à cette méthode, d'autres ont été explorées *(Figure 4)*. Le calcul du MNT permet dans certains cas de faire apparaître les cloisonnements par une faible différence de hauteur *(Rommel, 2015)* mais nécessite une précision très importante, un choix d'ombrage bien ajusté et un terrain relativement régulier. Pour améliorer cette méthode, le calcul de la dérivée seconde du MNT (Edge detection) *(Rommel, 2015)* permet de faire ressortir les variations locales d'altitude telles que des bordures de routes et de cloisonnements. Enfin la méthode retenue dans ce projet prend en compte le nombre de retour et le MNH en plus de l'Edge detection.
+
+```{r,  echo=FALSE, fig.cap = "Figure 4 : Comparaison des trois méthodes de détection appliquées sur la Forêt de Creuse dans la Somme. De gauche à droite : MNT, Edge detection, detect.cloiso + Voronoi"}
+knitr::include_graphics("https://drive.google.com/uc?export=view&id=1FHLn--pQmdhgkXVDOFPIzlp8K7YxAUMf ")
+```
+
+
+# Discussion
+
+La principale contrainte relative à ces données est leur taille importante. Il est pour l'instant inenvisageable de travailler à l'échelle de massifs forestiers entiers.\
+A l'heure actuelle la détection des cloisonnements a été testée sur des morceaux de forêts de différentes natures (plantations ou non, feuillus ou résineux, peuplements âgés ou jeunes,...) sans pour autant être exhaustive. Une étude supplémentaire serait nécessaire pour déterminer les facteurs nécessaires à une détection de qualité. Pour l'instant l'absence de détection n'exclue pas la présence des cloisonnements.\
+En plus des cloisonnements actuels, une approche supplémentaire sur la présence d'anciens cloisonnements ou passage de véhicules serait une information importante à donner au gestionnaire.\
+Il a également été remarqué que ce programme ne fonctionne pas pour détecter les cloisonnements lorsque la densité de couvert est trop élevée, un autre projet pour adapter ce programme aux différents contexte forestier pourrait donc être envisagé. On peut imaginer soit un autre programme, soit une adaptation de ce dernier avec des valeurs changeantes en fonction du contexte forestier. D'autre packages peuvent être utilisés pour des applications forestières comme [le package LiDARHD de l'IGN](https://www.theia-land.fr/product/lidarhd-un-package-r-pour-telecharger-et-gerer-les-fichiers-lidar-hd/) ou encore le [package sur la caractèrisation de la structure forestière](https://www.theia-land.fr/product/lidartree-un-package-r-pour-la-caracterisation-de-la-structure-des-forets-par-teledetection-lidar/).
+*mentionner le travail à l'echelle du terrain ou les cloiso sont deja visibles = quel interet à l'approche aerienne si on ne peut pas visualiser des grands ensembles.*
+Les cloisonnements sont détectés au même titre que des pistes forestières. Il faudrait ajouter un traitement permettant de les discriminer. De même la détection s'accompagne de nombreuses formes superflues ne correspondant pas aux cloisonnements. Ce bruit pourrait être retiré en complexifiant les fonctions.
+
+# Conclusion
+
+La détection des cloisonnements forestiers par LiDAR s'avère être une approche prometteuse pour améliorer la gestion forestière et avoir une trace des cloisonnements. Dans le cadre de ce projet, l'utilisation de la technologie LiDAR couplée à l'analyse sous R et QGIS a permis de produire des cartographies avec des cloisonnements visibles. Les programmes développés lors de ces deux semaines on permis de de produire quelques resultats prometteurs sur des forêts où la densité est faible. A l'inverse, des améliorations sont à apporter concernant les boisements plus denses. Ce projet souligne ainsi l'importance de l'intégration des nouvelles technologies dans la gestion durable des écosystèmes forestiers, permettant une prise de décision plus efficace.
+
+# Références 
+
+*Georges-Leroy, M., Nuninger, L., & Opitz, R. (2014). Lidar: Technique de détection au service de l’archéologie. Optique Photonique. https://doi.org/10.51257/a-v1-in215*\
+*IGN. 2021. Lidar aéroporté : des mesures de précision - Institut - IGN.* *https://www.ign.fr/institut/kiosque/lidar-aeroporte-des-mesures-de-precision (Consulté le 10 septembre 2024).*\
+*IGN. 2021. LiDAR HD : vers une nouvelle cartographie 3D du territoire - Institut - IGN.* *https://www.ign.fr/institut/lidar-hd-vers-une-nouvelle-cartographie-3d-du-territoire (Consulté le 10 septembre 2024).*\
+*Rommel, T. (2015). Automatic Detection of Line Structures in Airborne LiDAR Data.*

@@ -1,0 +1,39 @@
+download.lidar = function(x1, y1, x2, y2) {
+  # Créer une séquence de coordonnées avec un pas de 10000
+  x = seq(x1, x2, 10000)
+  y = seq(y1, y2, 10000)
+  
+  # Boucle à travers toutes les combinaisons de x et y
+  for (i in x) {
+    for (j in y) {
+      # Construire l'URL pour obtenir les données JSON
+      json_url <- paste0("https://data.geopf.fr/private/wfs/?service=WFS&version=2.0.0&apikey=interface_catalogue&request=GetFeature&typeNames=IGNF_LIDAR-HD_TA:nuage-dalle&outputFormat=application/json&bbox=", 
+                         i, ",", j, ",", i, ",", j)
+      print(paste("Fetching JSON from:", json_url))
+      
+      # Essayer de récupérer les données JSON
+      tryCatch({
+        json = fromJSON(txt = json_url)
+        
+        # Récupérer le lien du fichier .laz à partir des propriétés du JSON
+        lien = json[["features"]][["properties"]][["url"]][1]
+        
+        if (!is.null(lien)) {  # Vérifier que le lien n'est pas nul
+          print(paste("Downloading .laz file from:", lien))
+          
+          # Téléchargement du fichier .laz avec mode binaire
+          download.file(lien, 
+                        destfile = paste0("C:/Users/Thomas/Documents/R3A/Projet_7/", i, "_", j, ".laz"),
+                        mode = "wb")  # "wb" pour mode binaire
+          
+          print(paste("Saved file:", paste0(i, "_", j, ".laz")))
+        } else {
+          print("No valid link found in the JSON response.")
+        }
+      }, error = function(e) {
+        print(paste("Error fetching or downloading data for bbox:", i, j))
+        print(e)  # Affiche l'erreur rencontrée
+      })
+    }
+  }
+}

@@ -1,0 +1,165 @@
+# Librairies ----
+librarian::shelf(happign, terra, tmap, sf, dplyr, raster, leaflet, gpkg)
+tmap_mode("view")
+
+# Dossier de travail ----
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
+# Fonctions ----
+
+# Création de zones de buffers autour de la desserte
+zone.buffer <- function(
+    shape_routes, 
+    dist_1, 
+    dist_2, 
+    dist_3) {
+  
+  # Suppression des colonnes avec des valeurs NA
+  shape_routes_clean <- shape_routes[, colSums(is.na(shape_routes)) == 0]
+  
+  # Vérifier si les géométries sont valides, sinon les corriger
+  shape_routes_clean <- st_make_valid(
+    shape_routes_clean)
+  
+  # Créer des buffers autour des routes avec les distances spécifiées
+  buffer_1 <- st_buffer(
+    shape_routes_clean, 
+    dist = dist_1)
+  buffer_2 <- st_buffer(
+    shape_routes_clean, 
+    dist = dist_2)
+  buffer_3 <- st_buffer(
+    shape_routes_clean, 
+    dist = dist_3)
+  
+  # Ajouter une colonne "distance" pour identifier chaque zone
+  buffer_1$distance <- dist_1
+  buffer_2$distance <- dist_2
+  buffer_3$distance <- dist_3
+  
+  # Fusionner les buffers
+  buffer_merged <- rbind(
+    buffer_1, 
+    buffer_2, 
+    buffer_3)
+  
+  # Retourner l'objet avec les buffers fusionnés
+  return(buffer_merged)
+}
+
+# Créer une fonction pour générer un raster à partir d'un buffer avec nrows et ncols en entrée
+raster.buffer <- function(
+    buffer, 
+    resolution = 25, 
+    crs = "EPSG:2154", 
+    nrows = 300, 
+    ncols = 300) {
+  # Déterminer l'étendue (extent) du buffer
+  extent_shape <- ext(
+    st_bbox(buffer))
+  
+  # Créer un raster basé sur cette étendue, la résolution, nrows, ncols, et la projection spécifiée
+  r <- rast(
+    nrows = nrows, 
+    ncols = ncols, 
+    res = resolution, 
+    crs = crs, 
+    extent = extent_shape)
+  
+  # Rasteriser le buffer en utilisant la colonne 'distance'
+  buffer_raster <- terra::rasterize(
+    x = buffer, 
+    y = r, 
+    field = 'distance', 
+    fun = min)
+  
+  # Retourner le raster généré
+  return(buffer_raster)
+}
+
+# Fonction pour visualiser un raster avec des chemins de desserte superposés
+visualiser.raster.desserte <- function(buffer_raster, shape_routes, colors = c("green", "yellow", "orange"), title = "Buffers autour de la desserte") {
+  # Ajuster les marges et permettre des éléments en dehors de la zone de tracé
+  par(xpd = TRUE, mar = c(1, 1, 1, 1))
+  
+  # Tracer le raster fusionné avec les couleurs définies
+  plot(buffer_raster, 
+       main = title,        # Titre du graphique
+       col = colors,        # Appliquer les couleurs définies pour chaque distance
+       legend = TRUE,       # Afficher la légende
+       axes = TRUE,         # Afficher les axes
+       box = TRUE,          # Encadrer le tracé
+       xpd = TRUE)          # Permettre les éléments hors de la zone de tracé
+  
+  # Ajouter les chemins de desserte superposés sur le raster
+  plot(st_geometry(shape_routes), 
+       add = TRUE, 
+       col = "blue",        # Couleur des chemins de desserte
+       lwd = 1)             # Largeur de ligne pour les chemins
+}
+
+# Enregistrer le fichier vecteur dans un géopackage
+save.sf.gpkg <- function(sf) {
+  gpkg_path <- paste0(dirname(rstudioapi::getActiveDocumentContext()$path),"./buffer_vect.gpkg")
+  layer_name <- deparse(substitute(sf))
+  st_write(sf,
+           gpkg_path,
+           layer = layer_name,
+           append = TRUE)
+}
+
+# Enregistrer le fichier raster dans un géopackage
+save.raster.gpkg <- function(spat_raster) {
+  gpkg_path <- paste0(dirname(rstudioapi::getActiveDocumentContext()$path),"./buffer_rast.gpkg")
+  layer_name <- names(spat_raster)
+  writeRaster(spat_raster,
+              filename = "buffer_rast.gpkg",
+              filetype = "GPKG",
+              gdal = c("APPEND_SUBDATASET=YES",
+                       paste0("RASTER_TABLE=", layer_name)))
+}
+
+# Exemple ---- 
+
+# Définir le chemin du fichier GeoPackage
+geopackage_file <- paste0(dirname(dirname(rstudioapi::getActiveDocumentContext()$path)),"./Résultats/projet_R_exploitabilitév1.gpkg")
+shape_route_path <- sf::st_read(geopackage_file, layer = "chemins_exploitables")
+shape_route_path$type <-"chemins_exploitables"
+shape_route_path_2 <- sf::st_read(geopackage_file, layer = "routes_grumiers")
+shape_route_path_2$type <- "routes_grumiers"
+
+merged_shape <- rbind(
+  shape_route_path, 
+  shape_route_path_2)
+str(merged_shape$geom)
+# Création de zones de buffers 
+buffer_desserte_vect <- zone.buffer(
+  merged_shape, 
+  100, 
+  200, 
+  500)
+
+class(buffer_desserte_vect)
+# Enregistrer le fichier vecteur en GeoPackage
+save.sf.gpkg(
+  buffer_desserte_vect)
+
+# Générer et enregistrer le raster de desserte
+buffer_desserte_rast <- raster.buffer(
+  buffer_desserte_vect, 
+  resolution = 25, 
+  crs = "EPSG:2154", 
+  nrows = 300, 
+  ncols = 300)
+
+# Enregistrer le fichier raster en GeoPackage
+save.raster.gpkg(
+  buffer_desserte_rast)
+
+# Visualisation du raster avec les chemins de desserte
+carte_desserte <- visualiser.raster.desserte(
+  buffer_desserte_rast, 
+  merged_shape)
+
+# Exporter la carte en PDF
+ggsave("carte_buffer.pdf", plot = carte_desserte, width = 10, height = 10)

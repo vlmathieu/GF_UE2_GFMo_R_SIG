@@ -1,0 +1,143 @@
+library(lidR)
+library(happign)
+library(sf)
+library(tmap); tmap_mode("view") # Set map to interactive
+library(dplyr)
+library(ggplot2);sf_use_s2(FALSE) # Avoid problem with spherical geometry
+library(purrr)
+library(stars)
+library(terra)
+library(jsonlite)
+library(pbapply)
+
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+dir <- getwd()
+
+lien <- fromJSON(txt = "https://data.geopf.fr/private/wfs/?service=WFS&version=2.0.0&apikey=interface_catalogue&request=GetFeature&typeNames=IGNF_LIDAR-HD_TA:nuage-dalle&outputFormat=application/json&bbox=766276,6353692.630280115,769016.9951275728,6355112.417896504")
+lien <- lien[["features"]][["properties"]][["url"]][1]
+
+draw.area = function(){
+  zone = st_coordinates(st_transform(mapedit::drawFeatures(), crs = 2154))
+  y1 = min(zone[, 2])
+  x1 = min(zone[, 1])
+  y2 = max(zone[, 2])
+  x2 = max(zone[, 1])
+  return(c(x1,y1,x2,y2))
+}
+
+
+download.lidar = function(x1, y1, x2, y2) {
+  # Créer une séquence de coordonnées avec un pas de 10000
+  x = seq(x1, x2, 10000)
+  y = seq(y1, y2, 10000)
+  
+  # Boucle à travers toutes les combinaisons de x et y
+  for (i in x) {
+    for (j in y) {
+      # Construire l'URL pour obtenir les données JSON
+      json_url <- paste0("https://data.geopf.fr/private/wfs/?service=WFS&version=2.0.0&apikey=interface_catalogue&request=GetFeature&typeNames=IGNF_LIDAR-HD_TA:nuage-dalle&outputFormat=application/json&bbox=", 
+                         i, ",", j, ",", i, ",", j)
+      print(paste("Fetching JSON from:", json_url))
+      
+      # Essayer de récupérer les données JSON
+      tryCatch({
+        json = fromJSON(txt = json_url)
+        
+        # Récupérer le lien du fichier .laz à partir des propriétés du JSON
+        lien = json[["features"]][["properties"]][["url"]][1]
+        
+        if (!is.null(lien)) {  # Vérifier que le lien n'est pas nul
+          print(paste("Downloading .laz file from:", lien))
+          
+          # Téléchargement du fichier .laz avec mode binaire
+          download.file(lien, 
+                        destfile = paste0("dir", i, "_", j, ".laz"),
+                        mode = "wb")  # "wb" pour mode binaire
+          
+          print(paste("Saved file:", paste0(i, "_", j, ".laz")))
+        } else {
+          print("No valid link found in the JSON response.")
+        }
+      }, error = function(e) {
+        print(paste("Error fetching or downloading data for bbox:", i, j))
+        print(e)  # Affiche l'erreur rencontrée
+      })
+    }
+  }
+}
+
+cut.area = function(las, liste){
+  clip = clip_rectangle(las, liste[1], liste[2], liste[3], liste[4])
+  return(clip)
+}
+
+
+coord <- draw.area()
+download.lidar(coord[1],coord[2],coord[3],coord[4])
+
+laz_dir <- list.files(dir, 
+                  full.names = T, 
+                  pattern= '.laz')
+
+laz <- readLAS(laz_dir)
+plot(laz)
+
+#ancien laz LAS <- readLAS("C:/Users/Thomas/Documents/R3A/Projet_7/638285.514345207_6970281.70253564.laz")
+
+
+
+laz_soil <- lidR::filter_ground(laz)
+mycsf <- csf(TRUE, 1, 1, time_step = 1)
+laz_soil <- classify_ground(laz, mycsf)
+laz_soil <-lidR::filter_poi(laz_soil, Classification == 2L & ReturnNumber > 5L)
+
+plot(laz_soil)
+
+test = segment_shapes(LAS_soil, shp_hline(th1 = 100, th2 = 2, k = 3), attribute = "Shape")
+
+plot(test, color = "Shape")
+
+#test pour sol
+dtm_tin <-rasterize_terrain(laz, res = 1, algorithm = tin())
+plot_dtm3d(dtm_tin, bg="black")
+
+
+
+
+
+
+
+
+borders <- read_sf("C:/Users/mathi/Desktop/projet troyes/cadastre_foret.gpkg")
+layers <- get_layers_metadata("wms-r", "altimetrie")
+mnt_layer <- layers[3,1] # "ELEVATION.ELEVATIONGRIDCOVERAGE.HIGHRES"
+mns_layer <- layers[4,1] # "ELEVATION.ELEVATIONGRIDCOVERAGE.HIGHRES.MNS"
+
+mnt <- get_wms_raster(borders, mnt_layer, res = 5, crs = 2154, rgb = FALSE)
+mns <- get_wms_raster(borders, mns_layer, res = 5, crs = 2154, rgb = FALSE)
+
+level_curve <- get_wfs(borders, "ELEVATION.CONTOUR.LINE:courbe",
+                       spatial_filter = "intersects") |> 
+  st_intersection(borders)
+
+# Calculate digital height model i.e. tree height
+mnh <- mns - mnt
+mnh[mnh < 0] <- NA  # Remove negative value 
+mnh[mnh > 50] <- 40 # Remove height more than 50m
+plot(mnh)
+plot(mnt)
+plot(mns)
+
+las <- readLAS("C:/Users/mathi/Downloads/LHD_FXX_0638_6971_PTS_C_LAMB93_IGN69.copc.laz")
+plot(las)
+clip_bb = st_bbox(las)-500
+clip_las = clip_roi(las, clip_bb)
+plot(clip_las, color="Classification")
+# Khosravipour et al. pitfree algorithm
+thr <- c(0,2,5,10,2000)
+edg <- c(0, 1.5)
+chm <- rasterize_canopy(las, 1, pitfree(thr, edg))
+sol <- rasterize_terrain(las, 1, tin())
+plot(chm)
+plot(sol)
+plot(chm-sol)
