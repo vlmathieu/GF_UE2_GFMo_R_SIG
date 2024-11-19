@@ -163,7 +163,7 @@ setwd("C:/User/CC-1-RBasics-master")
 ```
 
 **Attention !** Notez que sur un ordinateur Windows, le chemin d'accès à un fichier copié-collé comporte des barres obliques inverses 
-séparant les dossiers (`"C:/dossier/données"`), alors que le chemin d'accès à un fichier que vous entrez dans R doit comporter des barres obliques 
+séparant les dossiers (`"C\:dossier\données"`), alors que le chemin d'accès à un fichier que vous entrez dans R doit comporter des barres obliques 
 inverses (`"C:/dossier/données"`).
 
 ## Importer et vérifier les données
